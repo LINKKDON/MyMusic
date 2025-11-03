@@ -768,7 +768,7 @@
       <div class="footer">
         <p class="author"
           >MADE BY
-          <a href="http://github.com/qier222" target="_blank">QIER222</a></p
+          <a href="http://github.com/LINKKDON" target="_blank">LINKUS</a></p
         >
         <p class="version">v{{ version }}</p>
 
