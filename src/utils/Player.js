@@ -417,7 +417,9 @@ export default class {
         // 强制使用HTTPS协议
         const audioUrl = data.url.replace(/^http:/, 'https:');
         console.debug(
-          `[debug][Player.js] 新API获取成功: ${track.name} - ${audioUrl.substring(0, 50)}...`
+          `[debug][Player.js] 新API获取成功: ${
+            track.name
+          } - ${audioUrl.substring(0, 50)}...`
         );
         return audioUrl;
       })
