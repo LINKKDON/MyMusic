@@ -405,8 +405,10 @@ export default class {
           console.warn('[Player] No URL in API response');
           return null;
         }
-        console.log('[Player] Got audio URL:', data.url);
-        return data.url;
+        // 强制使用HTTPS协议
+        const audioUrl = data.url.replace(/^http:/, 'https:');
+        console.log('[Player] Got audio URL:', audioUrl);
+        return audioUrl;
       })
       .catch(error => {
         console.error('[Player] API fetch error:', error);
