@@ -3,16 +3,55 @@ import { refreshCookie } from '@/api/auth';
 import dayjs from 'dayjs';
 import store from '@/store';
 
-export function isTrackPlayable() {
-  // 所有歌曲都显示为可播放
-  return {
-    playable: true,
-    reason: '',
-  };
+export function isTrackPlayable(track) {
+  // 登录用户：所有歌曲都显示为可播放
+  if (isAccountLoggedIn()) {
+    return {
+      playable: true,
+      reason: '',
+    };
+  }
+
+  // 未登录用户：检查歌曲权限
+  const privilege = track.privilege || {};
+  
+  if (privilege.cs) {
+    return { playable: false, reason: 'cloud' };
+  }
+  if (privilege.pl > 0) {
+    return { playable: true, reason: '' };
+  }
+  if (privilege.fee === 1 || privilege.fee === 4) {
+    return { playable: false, reason: 'vip' };
+  }
+  if (privilege.fee === 16) {
+    return { playable: false, reason: 'paid' };
+  }
+  if (!privilege.pl) {
+    return { playable: false, reason: 'unavailable' };
+  }
+  return { playable: true, reason: '' };
 }
 
 export function mapTrackPlayableStatus(tracks, privileges = []) {
   if (tracks?.length === undefined) return tracks;
+  
+  // 登录用户：所有歌曲标记为可播放
+  if (isAccountLoggedIn()) {
+    return tracks.map(t => {
+      const privilege = privileges.find(item => item.id === t.id) || {};
+      if (t.privilege) {
+        Object.assign(t.privilege, privilege);
+      } else {
+        t.privilege = privilege;
+      }
+      t.playable = true;
+      t.reason = '';
+      return t;
+    });
+  }
+
+  // 未登录用户：检查权限
   return tracks.map(t => {
     const privilege = privileges.find(item => item.id === t.id) || {};
     if (t.privilege) {
@@ -20,9 +59,9 @@ export function mapTrackPlayableStatus(tracks, privileges = []) {
     } else {
       t.privilege = privilege;
     }
-    // 强制所有歌曲可播放
-    t.playable = true;
-    t.reason = '';
+    const result = isTrackPlayable(t);
+    t.playable = result.playable;
+    t.reason = result.reason;
     return t;
   });
 }

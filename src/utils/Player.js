@@ -503,6 +503,18 @@ export default class {
     return this._getAudioSourceBlobURL(buffer);
   }
   _getAudioSource(track) {
+    // 未登录时不使用新API，防止滥用
+    if (!isAccountLoggedIn()) {
+      return this._getAudioSourceFromCache(String(track.id))
+        .then(source => {
+          return source ?? this._getAudioSourceFromNetease(track);
+        })
+        .then(source => {
+          return source ?? this._getAudioSourceFromUnblockMusic(track);
+        });
+    }
+    
+    // 登录后使用新API作为主要来源
     return this._getAudioSourceFromCache(String(track.id))
       .then(source => {
         return source ?? this._getAudioSourceFromNewAPI(track);
