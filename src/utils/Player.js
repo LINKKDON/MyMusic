@@ -3,10 +3,9 @@ import { getArtist } from '@/api/artist';
 import { trackScrobble, trackUpdateNowPlaying } from '@/api/lastfm';
 import { fmTrash, personalFM } from '@/api/others';
 import { getPlaylistDetail, intelligencePlaylist } from '@/api/playlist';
-import { getLyric, getMP3, getTrackDetail, scrobble } from '@/api/track';
+import { getLyric, getTrackDetail, scrobble } from '@/api/track';
 import store from '@/store';
-import { isAccountLoggedIn } from '@/utils/auth';
-import { cacheTrackSource, getTrackSource } from '@/utils/db';
+import { getTrackSource } from '@/utils/db';
 import { isCreateMpris, isCreateTray } from '@/utils/platform';
 import { Howl, Howler } from 'howler';
 import shuffle from 'lodash/shuffle';
@@ -397,7 +396,9 @@ export default class {
   }
   _getAudioSourceFromNetease(track) {
     return new Promise(resolve => {
-      resolve(`https://music-api.gdstudio.xyz/api.php?server=netease&type=url&id=${track.id}`);
+      resolve(
+        `https://music-api.gdstudio.xyz/api.php?server=netease&type=url&id=${track.id}`
+      );
     });
   }
   async _getAudioSourceFromUnblockMusic(track) {
