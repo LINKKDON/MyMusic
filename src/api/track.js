@@ -53,6 +53,8 @@ export function getTrackDetail(ids) {
       return data;
     });
   };
+
+  // 异步更新缓存
   fetchLatest();
 
   let idsInArray = [String(ids)];

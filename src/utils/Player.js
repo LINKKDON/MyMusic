@@ -398,14 +398,35 @@ export default class {
   _getAudioSourceFromNewAPI(track) {
     const apiUrl = `https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=${track.id}`;
     return fetch(apiUrl)
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          console.debug(
+            `[debug][Player.js] 新API请求失败: HTTP ${response.status}`
+          );
+          return null;
+        }
+        return response.json();
+      })
       .then(data => {
-        if (!data.url) return null;
+        if (!data || !data.url) {
+          console.debug(
+            `[debug][Player.js] 新API返回数据无效，歌曲ID: ${track.id}`
+          );
+          return null;
+        }
         // 强制使用HTTPS协议
         const audioUrl = data.url.replace(/^http:/, 'https:');
+        console.debug(
+          `[debug][Player.js] 新API获取成功: ${track.name} - ${audioUrl.substring(0, 50)}...`
+        );
         return audioUrl;
       })
-      .catch(() => null);
+      .catch(error => {
+        console.debug(
+          `[debug][Player.js] 新API异常: ${error.message}，歌曲ID: ${track.id}`
+        );
+        return null;
+      });
   }
   _getAudioSourceFromNetease(track) {
     if (isAccountLoggedIn()) {
@@ -579,7 +600,7 @@ export default class {
   }
   _cacheNextTrack() {
     let nextTrackID = this._isPersonalFM
-      ? this._personalFMNextTrack?.id ?? 0
+      ? (this._personalFMNextTrack?.id ?? 0)
       : this._getNextTrack()[0];
     if (!nextTrackID) return;
     if (this._personalFMTrack.id == nextTrackID) return;
