@@ -14,7 +14,7 @@ export function isTrackPlayable(track) {
 
   // 未登录用户：检查歌曲权限
   const privilege = track.privilege || {};
-  
+
   if (privilege.cs) {
     return { playable: false, reason: 'cloud' };
   }
@@ -35,7 +35,7 @@ export function isTrackPlayable(track) {
 
 export function mapTrackPlayableStatus(tracks, privileges = []) {
   if (tracks?.length === undefined) return tracks;
-  
+
   // 登录用户：所有歌曲标记为可播放
   if (isAccountLoggedIn()) {
     return tracks.map(t => {
