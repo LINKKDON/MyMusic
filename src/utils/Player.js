@@ -504,7 +504,7 @@ export default class {
           return source ?? this._getAudioSourceFromUnblockMusic(track);
         });
     }
-    
+
     // 登录后使用新API作为主要来源
     return this._getAudioSourceFromCache(String(track.id))
       .then(source => {
@@ -579,7 +579,7 @@ export default class {
   }
   _cacheNextTrack() {
     let nextTrackID = this._isPersonalFM
-      ? this._personalFMNextTrack?.id ?? 0
+      ? (this._personalFMNextTrack?.id ?? 0)
       : this._getNextTrack()[0];
     if (!nextTrackID) return;
     if (this._personalFMTrack.id == nextTrackID) return;
