@@ -395,15 +395,23 @@ export default class {
     });
   }
   _getAudioSourceFromNetease(track) {
-    return fetch(
-      `https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=${track.id}`
-    )
+    const apiUrl = `https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=${track.id}`;
+    console.log('[Player] Fetching audio from new API:', apiUrl);
+    return fetch(apiUrl)
       .then(response => response.json())
       .then(data => {
-        if (!data.url) return null;
+        console.log('[Player] API response:', data);
+        if (!data.url) {
+          console.warn('[Player] No URL in API response');
+          return null;
+        }
+        console.log('[Player] Got audio URL:', data.url);
         return data.url;
       })
-      .catch(() => null);
+      .catch(error => {
+        console.error('[Player] API fetch error:', error);
+        return null;
+      });
   }
   async _getAudioSourceFromUnblockMusic(track) {
     console.debug(`[debug][Player.js] _getAudioSourceFromUnblockMusic`);
