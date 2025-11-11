@@ -579,7 +579,7 @@ export default class {
   }
   _cacheNextTrack() {
     let nextTrackID = this._isPersonalFM
-      ? (this._personalFMNextTrack?.id ?? 0)
+      ? this._personalFMNextTrack?.id ?? 0
       : this._getNextTrack()[0];
     if (!nextTrackID) return;
     if (this._personalFMTrack.id == nextTrackID) return;
