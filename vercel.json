@@ -4,5 +4,10 @@
       "source": "/api/:match*",
       "destination": "https://music-api-enhanced.332209.xyz/:match*"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--openssl-legacy-provider"
+    }
+  }
 }
