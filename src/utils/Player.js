@@ -3,8 +3,9 @@ import { getArtist } from '@/api/artist';
 import { trackScrobble, trackUpdateNowPlaying } from '@/api/lastfm';
 import { fmTrash, personalFM } from '@/api/others';
 import { getPlaylistDetail, intelligencePlaylist } from '@/api/playlist';
-import { getLyric, getTrackDetail, scrobble } from '@/api/track';
+import { getLyric, getMP3, getTrackDetail, scrobble } from '@/api/track';
 import store from '@/store';
+import { isAccountLoggedIn } from '@/utils/auth';
 import { cacheTrackSource, getTrackSource } from '@/utils/db';
 import { isCreateMpris, isCreateTray } from '@/utils/platform';
 import { Howl, Howler } from 'howler';
@@ -394,26 +395,44 @@ export default class {
       return this._getAudioSourceBlobURL(t.source);
     });
   }
-  _getAudioSourceFromNetease(track) {
+  _getAudioSourceFromNewAPI(track) {
     const apiUrl = `https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=${track.id}`;
     console.log('[Player] Fetching audio from new API:', apiUrl);
     return fetch(apiUrl)
       .then(response => response.json())
       .then(data => {
-        console.log('[Player] API response:', data);
+        console.log('[Player] New API response:', data);
         if (!data.url) {
-          console.warn('[Player] No URL in API response');
+          console.warn('[Player] No URL in new API response');
           return null;
         }
         // 强制使用HTTPS协议
         const audioUrl = data.url.replace(/^http:/, 'https:');
-        console.log('[Player] Got audio URL:', audioUrl);
+        console.log('[Player] Got audio URL from new API:', audioUrl);
         return audioUrl;
       })
       .catch(error => {
-        console.error('[Player] API fetch error:', error);
+        console.error('[Player] New API fetch error:', error);
         return null;
       });
+  }
+  _getAudioSourceFromNetease(track) {
+    if (isAccountLoggedIn()) {
+      return getMP3(track.id).then(result => {
+        if (!result.data[0]) return null;
+        if (!result.data[0].url) return null;
+        if (result.data[0].freeTrialInfo !== null) return null; // 跳过只能试听的歌曲
+        const source = result.data[0].url.replace(/^http:/, 'https:');
+        if (store.state.settings.automaticallyCacheSongs) {
+          cacheTrackSource(track, source, result.data[0].br);
+        }
+        return source;
+      });
+    } else {
+      return new Promise(resolve => {
+        resolve(`https://music.163.com/song/media/outer/url?id=${track.id}`);
+      });
+    }
   }
   async _getAudioSourceFromUnblockMusic(track) {
     console.debug(`[debug][Player.js] _getAudioSourceFromUnblockMusic`);
@@ -485,6 +504,9 @@ export default class {
   }
   _getAudioSource(track) {
     return this._getAudioSourceFromCache(String(track.id))
+      .then(source => {
+        return source ?? this._getAudioSourceFromNewAPI(track);
+      })
       .then(source => {
         return source ?? this._getAudioSourceFromNetease(track);
       })
