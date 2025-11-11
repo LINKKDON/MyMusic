@@ -5,7 +5,7 @@ import { fmTrash, personalFM } from '@/api/others';
 import { getPlaylistDetail, intelligencePlaylist } from '@/api/playlist';
 import { getLyric, getTrackDetail, scrobble } from '@/api/track';
 import store from '@/store';
-import { getTrackSource } from '@/utils/db';
+import { cacheTrackSource, getTrackSource } from '@/utils/db';
 import { isCreateMpris, isCreateTray } from '@/utils/platform';
 import { Howl, Howler } from 'howler';
 import shuffle from 'lodash/shuffle';
