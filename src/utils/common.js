@@ -3,7 +3,7 @@ import { refreshCookie } from '@/api/auth';
 import dayjs from 'dayjs';
 import store from '@/store';
 
-export function isTrackPlayable(track) {
+export function isTrackPlayable() {
   // 所有歌曲都显示为可播放
   return {
     playable: true,
