@@ -4,38 +4,11 @@ import dayjs from 'dayjs';
 import store from '@/store';
 
 export function isTrackPlayable(track) {
-  let result = {
+  // 所有歌曲都显示为可播放
+  return {
     playable: true,
     reason: '',
   };
-  if (track?.privilege?.pl > 0) {
-    return result;
-  }
-  // cloud storage judgement logic
-  if (isAccountLoggedIn() && track?.privilege?.cs) {
-    return result;
-  }
-  if (track.fee === 1 || track.privilege?.fee === 1) {
-    if (isAccountLoggedIn() && store.state.data.user.vipType === 11) {
-      result.playable = true;
-    } else {
-      result.playable = false;
-      result.reason = 'VIP Only';
-    }
-  } else if (track.fee === 4 || track.privilege?.fee === 4) {
-    result.playable = false;
-    result.reason = '付费专辑';
-  } else if (
-    track.noCopyrightRcmd !== null &&
-    track.noCopyrightRcmd !== undefined
-  ) {
-    result.playable = false;
-    result.reason = '无版权';
-  } else if (track.privilege?.st < 0 && isAccountLoggedIn()) {
-    result.playable = false;
-    result.reason = '已下架';
-  }
-  return result;
 }
 
 export function mapTrackPlayableStatus(tracks, privileges = []) {
@@ -47,9 +20,9 @@ export function mapTrackPlayableStatus(tracks, privileges = []) {
     } else {
       t.privilege = privilege;
     }
-    let result = isTrackPlayable(t);
-    t.playable = result.playable;
-    t.reason = result.reason;
+    // 强制所有歌曲可播放
+    t.playable = true;
+    t.reason = '';
     return t;
   });
 }
