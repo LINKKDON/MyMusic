@@ -397,24 +397,15 @@ export default class {
   }
   _getAudioSourceFromNewAPI(track) {
     const apiUrl = `https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=${track.id}`;
-    console.log('[Player] Fetching audio from new API:', apiUrl);
     return fetch(apiUrl)
       .then(response => response.json())
       .then(data => {
-        console.log('[Player] New API response:', data);
-        if (!data.url) {
-          console.warn('[Player] No URL in new API response');
-          return null;
-        }
+        if (!data.url) return null;
         // 强制使用HTTPS协议
         const audioUrl = data.url.replace(/^http:/, 'https:');
-        console.log('[Player] Got audio URL from new API:', audioUrl);
         return audioUrl;
       })
-      .catch(error => {
-        console.error('[Player] New API fetch error:', error);
-        return null;
-      });
+      .catch(() => null);
   }
   _getAudioSourceFromNetease(track) {
     if (isAccountLoggedIn()) {
