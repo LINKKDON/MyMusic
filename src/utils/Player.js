@@ -621,10 +621,9 @@ export default class {
               newApiPromise.then(resolve);
             }, 100);
           }),
-        ])
-          .then(source => {
-            return source ?? this._getAudioSourceFromUnblockMusic(track);
-          });
+        ]).then(source => {
+          return source ?? this._getAudioSourceFromUnblockMusic(track);
+        });
       }
 
       // 非会员用户：优先使用gdmusic（无试听问题）
@@ -636,10 +635,9 @@ export default class {
             neteasePromise.then(resolve);
           }, 100);
         }),
-      ])
-        .then(source => {
-          return source ?? this._getAudioSourceFromUnblockMusic(track);
-        });
+      ]).then(source => {
+        return source ?? this._getAudioSourceFromUnblockMusic(track);
+      });
     });
   }
   _replaceCurrentTrack(
