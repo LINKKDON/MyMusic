@@ -431,7 +431,7 @@ export default class {
     // 获取用户音质设置并映射到新API的br参数
     const quality = store.state.settings?.musicQuality ?? '320000';
     let br;
-    
+
     // 将音质设置映射到API的br参数 (128/192/320/740/999)
     if (quality === 'flac' || quality === '999000') {
       br = 999; // 无损
@@ -452,7 +452,7 @@ export default class {
         br = 128;
       }
     }
-    
+
     const apiUrl = `https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=${track.id}&br=${br}`;
     return fetch(apiUrl)
       .then(response => {
