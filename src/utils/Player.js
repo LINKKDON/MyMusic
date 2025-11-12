@@ -473,11 +473,6 @@ export default class {
         }
         // 强制使用HTTPS协议
         const audioUrl = data.url.replace(/^http:/, 'https:');
-        const quality = store.state.settings?.musicQuality ?? '320000';
-        let brText =
-          quality === 'flac' || quality === '999000'
-            ? '无损'
-            : `${parseInt(quality) / 1000}kbps`;
         return audioUrl;
       })
       .catch(error => {
@@ -494,8 +489,6 @@ export default class {
         if (!result.data[0].url) return null;
         if (result.data[0].freeTrialInfo !== null) return null; // 跳过只能试听的歌曲
         const source = result.data[0].url.replace(/^http:/, 'https:');
-        const br = result.data[0].br;
-        const brText = br >= 999000 ? '无损' : `${Math.floor(br / 1000)}kbps`;
         if (store.state.settings.automaticallyCacheSongs) {
           cacheTrackSource(track, source, result.data[0].br);
         }
@@ -567,7 +560,6 @@ export default class {
     if (!retrieveSongInfo) {
       return null;
     }
-
 
     if (retrieveSongInfo.source !== 'bilibili') {
       return retrieveSongInfo.url;
