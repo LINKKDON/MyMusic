@@ -34,7 +34,10 @@ export async function getRecommendPlayList(limit, removePrivateRecommand) {
       if (removePrivateRecommand) recommend = recommend.slice(1);
       await replaceRecommendResult(recommend);
     }
-    return recommend.concat(playlists[1].result).slice(0, limit);
+    // 去重：过滤掉 recommendPlaylist 中已存在于 recommend 的歌单
+    const recommendIds = new Set(recommend.map(r => r.id));
+    const filtered = playlists[1].result.filter(p => !recommendIds.has(p.id));
+    return recommend.concat(filtered).slice(0, limit);
   } else {
     const response = await recommendPlaylist({ limit });
     return response.result;
