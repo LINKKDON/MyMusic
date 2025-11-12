@@ -46,14 +46,14 @@ export async function getRecommendPlayList(limit, removePrivateRecommand) {
 }
 
 async function replaceRecommendResult(recommend) {
+  // 优化：特殊歌单已经在 dailyRecommendPlaylist 中包含了名称和封面
+  // 无需再次请求完整的歌单详情（会返回几MB的数据）
+  // 如果需要更新，直接使用已有数据即可
   for (let r of recommend) {
     if (specialPlaylist.indexOf(r.id) > -1) {
-      const data = await getPlaylistDetail(r.id, true);
-      const playlist = data.playlist;
-      if (playlist) {
-        r.name = playlist.name;
-        r.picUrl = playlist.coverImgUrl;
-      }
+      // 特殊歌单的名称和封面已经在 recommend 数据中
+      // 不再请求详情，避免大数据量传输
+      console.debug(`[playList] 跳过特殊歌单 ${r.id} 的详情请求，使用已有数据`);
     }
   }
 }
