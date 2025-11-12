@@ -96,14 +96,14 @@ export default {
     },
     fetchData() {
       if (!isLooseLoggedIn()) return;
-      
+
       // 优化：使用 Promise.all 并行加载，提升初始化速度
       const requests = [
         this.$store.dispatch('fetchLikedSongs'),
         this.$store.dispatch('fetchLikedSongsWithDetails'),
         this.$store.dispatch('fetchLikedPlaylist'),
       ];
-      
+
       if (isAccountLoggedIn()) {
         requests.push(
           this.$store.dispatch('fetchLikedAlbums'),
@@ -112,7 +112,7 @@ export default {
           this.$store.dispatch('fetchCloudDisk')
         );
       }
-      
+
       Promise.all(requests).catch(error => {
         console.warn('[App.vue] Failed to fetch user data:', error);
       });

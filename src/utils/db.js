@@ -58,7 +58,7 @@ export function cacheTrackSource(trackInfo, url, bitRate, from = 'netease') {
     (trackInfo.artists && trackInfo.artists[0]?.name) ||
     'Unknown';
   let cover = trackInfo.al?.picUrl;
-  
+
   // 优化：只预加载一个尺寸的封面，且不阻塞主流程
   if (cover) {
     if (cover.slice(0, 5) !== 'https') {
@@ -69,7 +69,7 @@ export function cacheTrackSource(trackInfo, url, bitRate, from = 'netease') {
       // 静默失败，封面加载失败不影响播放
     });
   }
-  
+
   return axios
     .get(url, {
       responseType: 'arraybuffer',
@@ -106,14 +106,16 @@ export function getTrackSource(id) {
 }
 
 export function cacheTrackDetail(track, privileges) {
-  db.trackDetail.put({
-    id: track.id,
-    detail: track,
-    privileges: privileges,
-    updateTime: new Date().getTime(),
-  }).catch(error => {
-    console.warn('[db.js] Failed to cache track detail:', error);
-  });
+  db.trackDetail
+    .put({
+      id: track.id,
+      detail: track,
+      privileges: privileges,
+      updateTime: new Date().getTime(),
+    })
+    .catch(error => {
+      console.warn('[db.js] Failed to cache track detail:', error);
+    });
 }
 
 export function getTrackDetailFromCache(ids) {
@@ -142,13 +144,15 @@ export function getTrackDetailFromCache(ids) {
 }
 
 export function cacheLyric(id, lyrics) {
-  db.lyric.put({
-    id,
-    lyrics,
-    updateTime: new Date().getTime(),
-  }).catch(error => {
-    console.warn('[db.js] Failed to cache lyric:', error);
-  });
+  db.lyric
+    .put({
+      id,
+      lyrics,
+      updateTime: new Date().getTime(),
+    })
+    .catch(error => {
+      console.warn('[db.js] Failed to cache lyric:', error);
+    });
 }
 
 export function getLyricFromCache(id) {

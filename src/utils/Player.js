@@ -251,7 +251,7 @@ export default class {
     if (this._progressInterval) {
       clearInterval(this._progressInterval);
     }
-    
+
     // 同步播放进度
     this._progressInterval = setInterval(() => {
       if (this._howler === null) return;
@@ -262,30 +262,30 @@ export default class {
       }
     }, 1000);
   }
-  
+
   // 添加销毁方法清理资源
   destroy() {
     console.debug('[Player.js] Destroying player instance');
-    
+
     // 清理定时器
     if (this._progressInterval) {
       clearInterval(this._progressInterval);
       this._progressInterval = null;
     }
-    
+
     // 停止并卸载音频
     if (this._howler) {
       this._howler.stop();
       this._howler.unload();
       this._howler = null;
     }
-    
+
     // 清理 Blob URLs
     for (const url of this.createdBlobRecords) {
       URL.revokeObjectURL(url);
     }
     this.createdBlobRecords = [];
-    
+
     // 保存状态到 localStorage
     this.saveSelfToLocalStorage();
   }
