@@ -110,20 +110,10 @@ export default {
   },
   methods: {
     loadData() {
-      setTimeout(() => {
+      // 优化：使用 Promise.all 并行加载所有数据
+      let progressTimer = setTimeout(() => {
         if (!this.show) NProgress.start();
       }, 1000);
-      getRecommendPlayList(10, false).then(items => {
-        this.recommendPlaylist.items = items;
-        NProgress.done();
-        this.show = true;
-      });
-      newAlbums({
-        area: this.settings.musicLanguage ?? 'ALL',
-        limit: 10,
-      }).then(data => {
-        this.newReleasesAlbum.items = data.albums;
-      });
 
       const toplistOfArtistsAreaTable = {
         all: null,
@@ -132,25 +122,56 @@ export default {
         jp: 4,
         kr: 3,
       };
-      toplistOfArtists(
-        toplistOfArtistsAreaTable[this.settings.musicLanguage ?? 'all']
-      ).then(data => {
-        let indexs = [];
-        while (indexs.length < 6) {
-          let tmp = ~~(Math.random() * 100);
-          if (!indexs.includes(tmp)) indexs.push(tmp);
-        }
-        this.recommendArtists.indexs = indexs;
-        this.recommendArtists.items = data.list.artists.filter((l, index) =>
-          indexs.includes(index)
-        );
-      });
-      toplists().then(data => {
-        this.topList.items = data.list.filter(l =>
-          this.topList.ids.includes(l.id)
-        );
-      });
-      this.$refs.DailyTracksCard.loadDailyTracks();
+
+      // 并行发起所有请求
+      Promise.all([
+        getRecommendPlayList(10, false),
+        newAlbums({
+          area: this.settings.musicLanguage ?? 'ALL',
+          limit: 10,
+        }),
+        toplistOfArtists(
+          toplistOfArtistsAreaTable[this.settings.musicLanguage ?? 'all']
+        ),
+        toplists(),
+      ])
+        .then(([recommendItems, albumsData, artistsData, toplistData]) => {
+          // 处理推荐歌单
+          this.recommendPlaylist.items = recommendItems;
+
+          // 处理新专辑
+          this.newReleasesAlbum.items = albumsData.albums;
+
+          // 处理推荐艺术家（随机选6个）
+          let indexs = [];
+          while (indexs.length < 6) {
+            let tmp = ~~(Math.random() * 100);
+            if (!indexs.includes(tmp)) indexs.push(tmp);
+          }
+          this.recommendArtists.indexs = indexs;
+          this.recommendArtists.items = artistsData.list.artists.filter(
+            (l, index) => indexs.includes(index)
+          );
+
+          // 处理榜单
+          this.topList.items = toplistData.list.filter(l =>
+            this.topList.ids.includes(l.id)
+          );
+
+          // 所有数据加载完成，显示页面
+          clearTimeout(progressTimer);
+          NProgress.done();
+          this.show = true;
+        })
+        .catch(error => {
+          console.error('[home.vue] Failed to load data:', error);
+          clearTimeout(progressTimer);
+          NProgress.done();
+          this.show = true; // 即使失败也显示页面
+        });
+
+      // 每日推荐独立加载（不阻塞页面显示）
+      this.$refs.DailyTracksCard?.loadDailyTracks();
     },
   },
 };

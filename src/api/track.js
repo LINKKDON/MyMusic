@@ -54,19 +54,23 @@ export function getTrackDetail(ids) {
     });
   };
 
-  // 异步更新缓存
-  fetchLatest();
-
   let idsInArray = [String(ids)];
   if (typeof ids === 'string') {
     idsInArray = ids.split(',');
   }
 
+  // 优化：先读缓存，缓存命中则返回并异步更新
   return getTrackDetailFromCache(idsInArray).then(result => {
     if (result) {
       result.songs = mapTrackPlayableStatus(result.songs, result.privileges);
+      // 异步更新缓存，但不阻塞返回
+      fetchLatest().catch(err => {
+        console.debug('[track.js] Background cache update failed:', err);
+      });
+      return result;
     }
-    return result ?? fetchLatest();
+    // 缓存未命中才发起网络请求
+    return fetchLatest();
   });
 }
 
@@ -89,10 +93,17 @@ export function getLyric(id) {
     });
   };
 
-  fetchLatest();
-
+  // 优化：先读缓存，缓存命中则返回并异步更新
   return getLyricFromCache(id).then(result => {
-    return result ?? fetchLatest();
+    if (result) {
+      // 异步更新缓存，但不阻塞返回
+      fetchLatest().catch(err => {
+        console.debug('[track.js] Background lyric cache update failed:', err);
+      });
+      return result;
+    }
+    // 缓存未命中才发起网络请求
+    return fetchLatest();
   });
 }
 

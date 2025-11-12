@@ -81,6 +81,10 @@ export default {
     window.addEventListener('keydown', this.handleKeydown);
     this.fetchData();
   },
+  beforeDestroy() {
+    // 清理事件监听器，防止内存泄漏
+    window.removeEventListener('keydown', this.handleKeydown);
+  },
   methods: {
     handleKeydown(e) {
       if (e.code === 'Space') {
@@ -92,15 +96,26 @@ export default {
     },
     fetchData() {
       if (!isLooseLoggedIn()) return;
-      this.$store.dispatch('fetchLikedSongs');
-      this.$store.dispatch('fetchLikedSongsWithDetails');
-      this.$store.dispatch('fetchLikedPlaylist');
+      
+      // 优化：使用 Promise.all 并行加载，提升初始化速度
+      const requests = [
+        this.$store.dispatch('fetchLikedSongs'),
+        this.$store.dispatch('fetchLikedSongsWithDetails'),
+        this.$store.dispatch('fetchLikedPlaylist'),
+      ];
+      
       if (isAccountLoggedIn()) {
-        this.$store.dispatch('fetchLikedAlbums');
-        this.$store.dispatch('fetchLikedArtists');
-        this.$store.dispatch('fetchLikedMVs');
-        this.$store.dispatch('fetchCloudDisk');
+        requests.push(
+          this.$store.dispatch('fetchLikedAlbums'),
+          this.$store.dispatch('fetchLikedArtists'),
+          this.$store.dispatch('fetchLikedMVs'),
+          this.$store.dispatch('fetchCloudDisk')
+        );
       }
+      
+      Promise.all(requests).catch(error => {
+        console.warn('[App.vue] Failed to fetch user data:', error);
+      });
     },
     handleScroll() {
       this.$refs.scrollbar.handleScroll();

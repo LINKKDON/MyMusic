@@ -20,6 +20,34 @@ const service = axios.create({
   timeout: 15000,
 });
 
+// 缓存 localStorage 解析结果，避免每次请求都重新解析
+let cachedSettings = null;
+let settingsCacheTime = 0;
+const SETTINGS_CACHE_TTL = 5000; // 5秒缓存时间
+
+function getCachedSettings() {
+  const now = Date.now();
+  if (!cachedSettings || now - settingsCacheTime > SETTINGS_CACHE_TTL) {
+    try {
+      cachedSettings = JSON.parse(localStorage.getItem('settings') || '{}');
+      settingsCacheTime = now;
+    } catch (error) {
+      console.warn('[request.js] Failed to parse settings:', error);
+      cachedSettings = {};
+    }
+  }
+  return cachedSettings;
+}
+
+// 监听 storage 事件，当设置更改时清除缓存
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'settings') {
+      cachedSettings = null;
+    }
+  });
+}
+
 service.interceptors.request.use(function (config) {
   if (!config.params) config.params = {};
   if (baseURL.length) {
@@ -38,19 +66,16 @@ service.interceptors.request.use(function (config) {
     config.params.realIP = '211.161.244.70';
   }
 
-  // Force real_ip
-  const enableRealIP = JSON.parse(
-    localStorage.getItem('settings')
-  ).enableRealIP;
-  const realIP = JSON.parse(localStorage.getItem('settings')).realIP;
+  // Force real_ip - 使用缓存的设置
+  const settings = getCachedSettings();
   if (process.env.VUE_APP_REAL_IP) {
     config.params.realIP = process.env.VUE_APP_REAL_IP;
-  } else if (enableRealIP) {
-    config.params.realIP = realIP;
+  } else if (settings.enableRealIP) {
+    config.params.realIP = settings.realIP;
   }
 
-  const proxy = JSON.parse(localStorage.getItem('settings')).proxyConfig;
-  if (['HTTP', 'HTTPS'].includes(proxy.protocol)) {
+  const proxy = settings.proxyConfig;
+  if (proxy && ['HTTP', 'HTTPS'].includes(proxy.protocol)) {
     config.params.proxy = `${proxy.protocol}://${proxy.server}:${proxy.port}`;
   }
 

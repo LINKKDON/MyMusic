@@ -70,6 +70,7 @@ export default class {
     this._volumeBeforeMuted = 1; // 用于保存静音前的音量
     this._personalFMLoading = false; // 是否正在私人FM中加载新的track
     this._personalFMNextLoading = false; // 是否正在缓存私人FM的下一首歌曲
+    this._progressInterval = null; // 播放进度同步定时器
 
     // 播放信息
     this._list = []; // 播放列表
@@ -246,10 +247,13 @@ export default class {
     }
   }
   _setIntervals() {
+    // 清除旧的定时器
+    if (this._progressInterval) {
+      clearInterval(this._progressInterval);
+    }
+    
     // 同步播放进度
-    // TODO: 如果 _progress 在别的地方被改变了，
-    // 这个定时器会覆盖之前改变的值，是bug
-    setInterval(() => {
+    this._progressInterval = setInterval(() => {
       if (this._howler === null) return;
       this._progress = this._howler.seek();
       localStorage.setItem('playerCurrentTrackTime', this._progress);
@@ -257,6 +261,33 @@ export default class {
         ipcRenderer?.send('playerCurrentTrackTime', this._progress);
       }
     }, 1000);
+  }
+  
+  // 添加销毁方法清理资源
+  destroy() {
+    console.debug('[Player.js] Destroying player instance');
+    
+    // 清理定时器
+    if (this._progressInterval) {
+      clearInterval(this._progressInterval);
+      this._progressInterval = null;
+    }
+    
+    // 停止并卸载音频
+    if (this._howler) {
+      this._howler.stop();
+      this._howler.unload();
+      this._howler = null;
+    }
+    
+    // 清理 Blob URLs
+    for (const url of this.createdBlobRecords) {
+      URL.revokeObjectURL(url);
+    }
+    this.createdBlobRecords = [];
+    
+    // 保存状态到 localStorage
+    this.saveSelfToLocalStorage();
   }
   _getNextTrack() {
     const next = this._reversed ? this.current - 1 : this.current + 1;
@@ -379,7 +410,8 @@ export default class {
     // Clean up the previous object URLs since we've created a new one.
     // Revoke object URLs can release the memory taken by a Blob,
     // which occupied a large proportion of memory.
-    for (const url in this.createdBlobRecords) {
+    // 修复：使用 for...of 遍历数组而不是 for...in
+    for (const url of this.createdBlobRecords) {
       URL.revokeObjectURL(url);
     }
 
