@@ -97,24 +97,15 @@ export default {
     fetchData() {
       if (!isLooseLoggedIn()) return;
 
-      // 优化：使用 Promise.all 并行加载，提升初始化速度
-      const requests = [
-        this.$store.dispatch('fetchLikedSongs'),
-        this.$store.dispatch('fetchLikedSongsWithDetails'),
-        this.$store.dispatch('fetchLikedPlaylist'),
-      ];
+      // 只加载播放器绝对必需的数据（喜欢的歌曲ID列表）
+      // 其他数据由各个页面按需加载
+      this.$store.dispatch('fetchLikedSongs').catch(error => {
+        console.warn('[App.vue] Failed to fetch liked songs:', error);
+      });
 
-      if (isAccountLoggedIn()) {
-        requests.push(
-          this.$store.dispatch('fetchLikedAlbums'),
-          this.$store.dispatch('fetchLikedArtists'),
-          this.$store.dispatch('fetchLikedMVs'),
-          this.$store.dispatch('fetchCloudDisk')
-        );
-      }
-
-      Promise.all(requests).catch(error => {
-        console.warn('[App.vue] Failed to fetch user data:', error);
+      // 首页需要显示用户歌单，立即加载
+      this.$store.dispatch('fetchLikedPlaylist').catch(error => {
+        console.warn('[App.vue] Failed to fetch liked playlist:', error);
       });
     },
     handleScroll() {
