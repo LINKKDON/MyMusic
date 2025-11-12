@@ -428,7 +428,32 @@ export default class {
     });
   }
   _getAudioSourceFromNewAPI(track) {
-    const apiUrl = `https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=${track.id}`;
+    // 获取用户音质设置并映射到新API的br参数
+    const quality = store.state.settings?.musicQuality ?? '320000';
+    let br;
+    
+    // 将音质设置映射到API的br参数 (128/192/320/740/999)
+    if (quality === 'flac' || quality === '999000') {
+      br = 999; // 无损
+    } else if (quality === '320000') {
+      br = 320; // 高品质
+    } else if (quality === '192000') {
+      br = 192; // 较高品质
+    } else if (quality === '128000') {
+      br = 128; // 标准品质
+    } else {
+      // 处理其他可能的值，根据数值范围映射
+      const qualityNum = parseInt(quality);
+      if (qualityNum >= 320000) {
+        br = 320;
+      } else if (qualityNum >= 192000) {
+        br = 192;
+      } else {
+        br = 128;
+      }
+    }
+    
+    const apiUrl = `https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=${track.id}&br=${br}`;
     return fetch(apiUrl)
       .then(response => {
         if (!response.ok) {
