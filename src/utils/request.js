@@ -41,7 +41,7 @@ function getCachedSettings() {
 
 // 监听 storage 事件，当设置更改时清除缓存
 if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (e) => {
+  window.addEventListener('storage', e => {
     if (e.key === 'settings') {
       cachedSettings = null;
     }
