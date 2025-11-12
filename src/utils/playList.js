@@ -3,7 +3,6 @@ import state from '../store/state';
 import {
   recommendPlaylist,
   dailyRecommendPlaylist,
-  getPlaylistDetail,
 } from '@/api/playlist';
 import { isAccountLoggedIn } from '@/utils/auth';
 
