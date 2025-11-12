@@ -97,7 +97,7 @@ service.interceptors.response.use(
 
       const result = {};
       for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
           const value = obj[key];
           // 处理图片相关字段
           if (
