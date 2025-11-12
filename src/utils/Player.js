@@ -607,28 +607,36 @@ export default class {
     return this._getAudioSourceFromCache(String(track.id)).then(source => {
       if (source) return source;
 
-      // 并行请求两个API
+      // 并行请求两个API，谁快用谁
       const neteasePromise = this._getAudioSourceFromNetease(track);
       const newApiPromise = this._getAudioSourceFromNewAPI(track);
 
-      // 会员用户：并行请求，优先使用332209(网易云)的结果
+      // 会员用户：优先使用网易云官方源
       if (isVip) {
-        return Promise.all([neteasePromise, newApiPromise])
-          .then(([netease, newApi]) => {
-            // 优先使用网易云官方源（更稳定）
-            return netease ?? newApi;
-          })
+        return Promise.race([
+          neteasePromise,
+          // 给网易云100ms优先时间，之后如果新API先返回也接受
+          new Promise(resolve => {
+            setTimeout(() => {
+              newApiPromise.then(resolve);
+            }, 100);
+          }),
+        ])
           .then(source => {
             return source ?? this._getAudioSourceFromUnblockMusic(track);
           });
       }
 
-      // 非会员用户：并行请求，优先使用gdmusic（不会返回试听）
-      return Promise.all([newApiPromise, neteasePromise])
-        .then(([newApi, netease]) => {
-          // 优先使用gdmusic（无试听问题）
-          return newApi ?? netease;
-        })
+      // 非会员用户：优先使用gdmusic（无试听问题）
+      return Promise.race([
+        newApiPromise,
+        // 给新API 100ms优先时间
+        new Promise(resolve => {
+          setTimeout(() => {
+            neteasePromise.then(resolve);
+          }, 100);
+        }),
+      ])
         .then(source => {
           return source ?? this._getAudioSourceFromUnblockMusic(track);
         });
