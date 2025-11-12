@@ -1,9 +1,6 @@
 import router from '../router';
 import state from '../store/state';
-import {
-  recommendPlaylist,
-  dailyRecommendPlaylist,
-} from '@/api/playlist';
+import { recommendPlaylist, dailyRecommendPlaylist } from '@/api/playlist';
 import { isAccountLoggedIn } from '@/utils/auth';
 
 export function hasListSource() {
