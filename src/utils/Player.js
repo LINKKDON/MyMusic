@@ -601,17 +601,82 @@ export default class {
         });
     }
 
-    // 登录后使用新API作为主要来源
-    return this._getAudioSourceFromCache(String(track.id))
-      .then(source => {
-        return source ?? this._getAudioSourceFromNewAPI(track);
-      })
-      .then(source => {
-        return source ?? this._getAudioSourceFromNetease(track);
-      })
-      .then(source => {
-        return source ?? this._getAudioSourceFromUnblockMusic(track);
-      });
+    // 已登录：根据会员状态决定API优先级
+    const isVip = store.state.data?.user?.vipType > 0;
+
+    return this._getAudioSourceFromCache(String(track.id)).then(source => {
+      if (source) return source;
+
+      // 并行请求两个API
+      const neteasePromise = this._getAudioSourceFromNetease(track);
+      const newApiPromise = this._getAudioSourceFromNewAPI(track);
+
+      // 会员用户：优先使用332209(网易云)的结果
+      if (isVip) {
+        return Promise.race([
+          neteasePromise.then(result => {
+            if (result) return { source: result, priority: 'high' };
+            return null;
+          }),
+          newApiPromise.then(result => {
+            if (result) return { source: result, priority: 'low' };
+            return null;
+          }),
+          // 添加一个延迟Promise，确保优先API有机会先返回
+          new Promise(resolve =>
+            setTimeout(() => resolve(null), 100)
+          ).then(() =>
+            Promise.race([neteasePromise, newApiPromise])
+              .then(result => result ? { source: result, priority: 'any' } : null)
+          ),
+        ])
+          .then(result => {
+            // 如果是高优先级的结果，立即返回
+            if (result?.priority === 'high') {
+              return result.source;
+            }
+            // 否则等待两个请求都完成，优先使用网易云的结果
+            return Promise.all([neteasePromise, newApiPromise]).then(
+              ([netease, newApi]) => netease ?? newApi
+            );
+          })
+          .then(source => {
+            return source ?? this._getAudioSourceFromUnblockMusic(track);
+          });
+      }
+
+      // 非会员用户：并行请求，优先使用gdmusic（不会返回试听）
+      return Promise.race([
+        newApiPromise.then(result => {
+          if (result) return { source: result, priority: 'high' };
+          return null;
+        }),
+        neteasePromise.then(result => {
+          if (result) return { source: result, priority: 'low' };
+          return null;
+        }),
+        // 添加一个延迟Promise，确保优先API有机会先返回
+        new Promise(resolve =>
+          setTimeout(() => resolve(null), 100)
+        ).then(() =>
+          Promise.race([newApiPromise, neteasePromise])
+            .then(result => result ? { source: result, priority: 'any' } : null)
+        ),
+      ])
+        .then(result => {
+          // 如果是高优先级的结果（gdmusic），立即返回
+          if (result?.priority === 'high') {
+            return result.source;
+          }
+          // 否则等待两个请求都完成，优先使用gdmusic的结果
+          return Promise.all([newApiPromise, neteasePromise]).then(
+            ([newApi, netease]) => newApi ?? netease
+          );
+        })
+        .then(source => {
+          return source ?? this._getAudioSourceFromUnblockMusic(track);
+        });
+    });
   }
   _replaceCurrentTrack(
     id,
