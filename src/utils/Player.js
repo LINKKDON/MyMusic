@@ -611,34 +611,12 @@ export default class {
       const neteasePromise = this._getAudioSourceFromNetease(track);
       const newApiPromise = this._getAudioSourceFromNewAPI(track);
 
-      // 会员用户：优先使用332209(网易云)的结果
+      // 会员用户：并行请求，优先使用332209(网易云)的结果
       if (isVip) {
-        return Promise.race([
-          neteasePromise.then(result => {
-            if (result) return { source: result, priority: 'high' };
-            return null;
-          }),
-          newApiPromise.then(result => {
-            if (result) return { source: result, priority: 'low' };
-            return null;
-          }),
-          // 添加一个延迟Promise，确保优先API有机会先返回
-          new Promise(resolve => setTimeout(() => resolve(null), 100)).then(
-            () =>
-              Promise.race([neteasePromise, newApiPromise]).then(result =>
-                result ? { source: result, priority: 'any' } : null
-              )
-          ),
-        ])
-          .then(result => {
-            // 如果是高优先级的结果，立即返回
-            if (result?.priority === 'high') {
-              return result.source;
-            }
-            // 否则等待两个请求都完成，优先使用网易云的结果
-            return Promise.all([neteasePromise, newApiPromise]).then(
-              ([netease, newApi]) => netease ?? newApi
-            );
+        return Promise.all([neteasePromise, newApiPromise])
+          .then(([netease, newApi]) => {
+            // 优先使用网易云官方源（更稳定）
+            return netease ?? newApi;
           })
           .then(source => {
             return source ?? this._getAudioSourceFromUnblockMusic(track);
@@ -646,31 +624,10 @@ export default class {
       }
 
       // 非会员用户：并行请求，优先使用gdmusic（不会返回试听）
-      return Promise.race([
-        newApiPromise.then(result => {
-          if (result) return { source: result, priority: 'high' };
-          return null;
-        }),
-        neteasePromise.then(result => {
-          if (result) return { source: result, priority: 'low' };
-          return null;
-        }),
-        // 添加一个延迟Promise，确保优先API有机会先返回
-        new Promise(resolve => setTimeout(() => resolve(null), 100)).then(() =>
-          Promise.race([newApiPromise, neteasePromise]).then(result =>
-            result ? { source: result, priority: 'any' } : null
-          )
-        ),
-      ])
-        .then(result => {
-          // 如果是高优先级的结果（gdmusic），立即返回
-          if (result?.priority === 'high') {
-            return result.source;
-          }
-          // 否则等待两个请求都完成，优先使用gdmusic的结果
-          return Promise.all([newApiPromise, neteasePromise]).then(
-            ([newApi, netease]) => newApi ?? netease
-          );
+      return Promise.all([newApiPromise, neteasePromise])
+        .then(([newApi, netease]) => {
+          // 优先使用gdmusic（无试听问题）
+          return newApi ?? netease;
         })
         .then(source => {
           return source ?? this._getAudioSourceFromUnblockMusic(track);
