@@ -424,7 +424,6 @@ export default class {
   _getAudioSourceFromCache(id) {
     return getTrackSource(id).then(t => {
       if (!t) return null;
-      console.log(`[Player.js] 🎵 音频来源: 缓存 (Cache) | 歌曲ID: ${id}`);
       return this._getAudioSourceBlobURL(t.source);
     });
   }
@@ -479,9 +478,6 @@ export default class {
           quality === 'flac' || quality === '999000'
             ? '无损'
             : `${parseInt(quality) / 1000}kbps`;
-        console.log(
-          `[Player.js] 🎵 音频来源: 新API (gdmusic) | 歌曲: ${track.name} | 音质: ${brText}`
-        );
         return audioUrl;
       })
       .catch(error => {
@@ -500,18 +496,12 @@ export default class {
         const source = result.data[0].url.replace(/^http:/, 'https:');
         const br = result.data[0].br;
         const brText = br >= 999000 ? '无损' : `${Math.floor(br / 1000)}kbps`;
-        console.log(
-          `[Player.js] 🎵 音频来源: 网易云API (Netease) | 歌曲: ${track.name} | 音质: ${brText}`
-        );
         if (store.state.settings.automaticallyCacheSongs) {
           cacheTrackSource(track, source, result.data[0].br);
         }
         return source;
       });
     } else {
-      console.log(
-        `[Player.js] 🎵 音频来源: 网易云API (Netease/未登录) | 歌曲: ${track.name}`
-      );
       return new Promise(resolve => {
         resolve(`https://music.163.com/song/media/outer/url?id=${track.id}`);
       });
@@ -578,9 +568,6 @@ export default class {
       return null;
     }
 
-    console.log(
-      `[Player.js] 🎵 音频来源: UnblockMusic (${retrieveSongInfo.source}) | 歌曲: ${track.name}`
-    );
 
     if (retrieveSongInfo.source !== 'bilibili') {
       return retrieveSongInfo.url;
