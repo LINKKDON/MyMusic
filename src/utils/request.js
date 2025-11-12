@@ -1,5 +1,6 @@
 import router from '@/router';
 import { doLogout, getCookie } from '@/utils/auth';
+import { updateHttps } from '@/utils/common';
 import axios from 'axios';
 
 let baseURL = '';
@@ -85,7 +86,43 @@ service.interceptors.request.use(function (config) {
 service.interceptors.response.use(
   response => {
     const res = response.data;
-    return res;
+
+    // 递归处理所有图片 URL，将 HTTP 转换为 HTTPS
+    function httpsifyImageUrls(obj) {
+      if (!obj || typeof obj !== 'object') return obj;
+
+      if (Array.isArray(obj)) {
+        return obj.map(item => httpsifyImageUrls(item));
+      }
+
+      const result = {};
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          const value = obj[key];
+          // 处理图片相关字段
+          if (
+            typeof value === 'string' &&
+            (key === 'picUrl' ||
+              key === 'coverImgUrl' ||
+              key === 'avatarUrl' ||
+              key === 'backgroundCoverUrl' ||
+              key === 'img1v1Url' ||
+              key === 'imgUrl' ||
+              key === 'cover' ||
+              key === 'avatar')
+          ) {
+            result[key] = updateHttps(value);
+          } else if (typeof value === 'object') {
+            result[key] = httpsifyImageUrls(value);
+          } else {
+            result[key] = value;
+          }
+        }
+      }
+      return result;
+    }
+
+    return httpsifyImageUrls(res);
   },
   async error => {
     /** @type {import('axios').AxiosResponse | null} */
