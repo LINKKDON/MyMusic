@@ -623,11 +623,11 @@ export default class {
             return null;
           }),
           // 添加一个延迟Promise，确保优先API有机会先返回
-          new Promise(resolve =>
-            setTimeout(() => resolve(null), 100)
-          ).then(() =>
-            Promise.race([neteasePromise, newApiPromise])
-              .then(result => result ? { source: result, priority: 'any' } : null)
+          new Promise(resolve => setTimeout(() => resolve(null), 100)).then(
+            () =>
+              Promise.race([neteasePromise, newApiPromise]).then(result =>
+                result ? { source: result, priority: 'any' } : null
+              )
           ),
         ])
           .then(result => {
@@ -656,11 +656,10 @@ export default class {
           return null;
         }),
         // 添加一个延迟Promise，确保优先API有机会先返回
-        new Promise(resolve =>
-          setTimeout(() => resolve(null), 100)
-        ).then(() =>
-          Promise.race([newApiPromise, neteasePromise])
-            .then(result => result ? { source: result, priority: 'any' } : null)
+        new Promise(resolve => setTimeout(() => resolve(null), 100)).then(() =>
+          Promise.race([newApiPromise, neteasePromise]).then(result =>
+            result ? { source: result, priority: 'any' } : null
+          )
         ),
       ])
         .then(result => {
