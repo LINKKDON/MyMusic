@@ -62,9 +62,9 @@ scoop install extras/yesplaymusic
 
 #### 1️⃣ 准备 API 服务
 
-部署网易云 API → [查看教程](https://neteasecloudmusicapi.vercel.app/#/?id=%e5%ae%89%e8%a3%85)
+部署网易云 API → [查看教程](https://github.com/Binaryify/NeteaseCloudMusicApi#%E9%83%A8%E7%BD%B2)
 
-💡 推荐部署到 Vercel，免费且稳定
+💡 推荐使用增强版 API，支持更多功能，推荐部署到 Vercel
 
 #### 2️⃣ Fork 本仓库
 
@@ -117,6 +117,7 @@ scoop install extras/yesplaymusic
 
 - Node.js
 - Yarn
+- [NeteaseCloudMusicApiEnhanced](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)
 
 ### 本地运行
 
@@ -161,5 +162,5 @@ yarn electron:build --macos dir:arm64
 
 ## 🙏 鸣谢
 
-- API: [NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi)
+- API: [NeteaseCloudMusicApiEnhanced](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)
 - 设计灵感: Apple Music • YouTube Music • Spotify

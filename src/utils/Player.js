@@ -370,12 +370,20 @@ export default class {
   _playAudioSource(source, autoplay = true) {
     // 先清理旧的 Howler 实例，避免音频池耗尽
     if (this._howler) {
-      this._howler.unload();
+      try {
+        this._howler.unload();
+      } catch (e) {
+        console.debug('[Player.js] Error unloading howler:', e);
+      }
       this._howler = null;
     }
 
     // 确保全局清理
-    Howler.unload();
+    try {
+      Howler.unload();
+    } catch (e) {
+      console.debug('[Player.js] Error unloading Howler globally:', e);
+    }
 
     this._howler = new Howl({
       src: [source],
