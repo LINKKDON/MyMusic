@@ -530,7 +530,7 @@ export default class {
         return response.json();
       })
       .then(data => {
-        if (!data || !data.url) {
+        if (!data || !data.url || data.url === '') {
           if (DEBUG_MODE) {
             console.debug(
               `[debug][Player.js] 新API返回数据无效，歌曲ID: ${track.id}`
@@ -572,6 +572,7 @@ export default class {
       return getMP3(track.id).then(result => {
         if (!result.data[0]) return null;
         if (!result.data[0].url) return null;
+        if (result.data[0].code !== 200) return null; // 检查资源状态码
         if (result.data[0].freeTrialInfo !== null) return null; // 跳过只能试听的歌曲
 
         // 🔥 记录响应时间
@@ -686,8 +687,8 @@ export default class {
     const sum = records.reduce((a, b) => a + b, 0);
     const avg = sum / records.length;
 
-    // 平均值 * 1.5 作为超时时间，最小1秒，最大5秒
-    const timeout = Math.min(Math.max(avg * 1.5, 1000), 5000);
+    // 平均值 * 1.5 作为超时时间，最小1秒，最大3秒
+    const timeout = Math.min(Math.max(avg * 1.5, 1000), 3000);
     if (DEBUG_MODE) {
       console.debug(
         `[Player.js] ${apiName} 平均响应时间: ${avg.toFixed(
