@@ -1,11 +1,20 @@
 {
   "rewrites": [
     {
+      "comment": "网易云音乐API代理 - 处理所有业务逻辑API（用户、歌单、专辑等）",
       "source": "/api/:match*",
       "destination": "https://music-api-enhanced.332209.xyz/:match*"
     },
     {
-      "source": "/gdmusic/api.php",
+      "comment": "第三方音乐源API代理 - 用于获取音频播放源，解决试听限制问题",
+      "comment2": "维护说明：",
+      "comment3": "1. 仅更换域名：修改destination的域名部分即可",
+      "comment4": "2. API路径也变化：需同时修改source和destination，并修改Player.js:467行的路径",
+      "comment5": "例如：若新API为 https://new-api.com/v2/stream.php",
+      "comment6": "     则修改 source: '/music-source/v2/stream.php'",
+      "comment7": "     destination: 'https://new-api.com/v2/stream.php'",
+      "comment8": "     并修改 Player.js 中的路径为 /music-source/v2/stream.php",
+      "source": "/music-source/api.php",
       "destination": "https://music-api.gdstudio.xyz/api.php"
     }
   ],

@@ -368,7 +368,15 @@ export default class {
     }
   }
   _playAudioSource(source, autoplay = true) {
+    // 先清理旧的 Howler 实例，避免音频池耗尽
+    if (this._howler) {
+      this._howler.unload();
+      this._howler = null;
+    }
+
+    // 确保全局清理
     Howler.unload();
+
     this._howler = new Howl({
       src: [source],
       html5: true,
@@ -411,20 +419,21 @@ export default class {
     this.setOutputDevice();
   }
   _getAudioSourceBlobURL(data) {
-    // Create a new object URL.
-    const source = URL.createObjectURL(new Blob([data]));
-
-    // Clean up the previous object URLs since we've created a new one.
-    // Revoke object URLs can release the memory taken by a Blob,
-    // which occupied a large proportion of memory.
-    // 修复：使用 for...of 遍历数组而不是 for...in
+    // 立即清理所有旧的 Blob URLs，释放内存
     for (const url of this.createdBlobRecords) {
-      URL.revokeObjectURL(url);
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.debug('[Player.js] Failed to revoke blob URL:', e);
+      }
     }
 
-    // Then, we replace the createBlobRecords with new one with
-    // our newly created object URL.
-    this.createdBlobRecords = [source];
+    // 清空记录
+    this.createdBlobRecords = [];
+
+    // 创建新的 Blob URL
+    const source = URL.createObjectURL(new Blob([data]));
+    this.createdBlobRecords.push(source);
 
     return source;
   }
@@ -460,7 +469,17 @@ export default class {
       }
     }
 
-    const apiUrl = `/gdmusic/api.php?types=url&source=netease&id=${track.id}&br=${br}`;
+    // 方案B：通过Vercel代理访问第三方音乐源API
+    // 使用相对路径 /music-source/api.php，由 vercel.json 代理到实际的API地址
+    // 优点：统一通过Vercel管理所有API，便于切换和维护
+    //
+    // 维护说明：
+    // 1. 仅更换API域名：只需修改 vercel.json 中的 destination 域名部分
+    // 2. API路径也变化（如 api.php → v2/stream.php）：
+    //    - 修改 vercel.json 中的 source 和 destination 路径
+    //    - 修改下方 apiUrl 中的路径（如：/music-source/v2/stream.php）
+    //    - 保持查询参数不变
+    const apiUrl = `/music-source/api.php?types=url&source=netease&id=${track.id}&br=${br}`;
     return fetch(apiUrl)
       .then(response => {
         if (!response.ok) {
