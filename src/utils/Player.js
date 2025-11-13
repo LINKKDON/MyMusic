@@ -547,6 +547,13 @@ export default class {
 
         // 强制使用HTTPS协议
         const audioUrl = data.url.replace(/^http:/, 'https:');
+
+        // 🔥 缓存 gdmusic 音源到 IndexedDB
+        if (store.state.settings.automaticallyCacheSongs) {
+          // br * 1000 转换为比特率格式 (如 320 -> 320000)
+          cacheTrackSource(track, audioUrl, br * 1000, 'gdmusic');
+        }
+
         return audioUrl;
       })
       .catch(error => {
