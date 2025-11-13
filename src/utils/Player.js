@@ -16,6 +16,9 @@ const PLAY_PAUSE_FADE_DURATION = 200;
 
 const INDEX_IN_PLAY_NEXT = -1;
 
+// 🔥 性能优化：开发模式开关，生产环境关闭所有调试日志
+const DEBUG_MODE = process.env.NODE_ENV === 'development';
+
 /**
  * @readonly
  * @enum {string}
@@ -349,9 +352,11 @@ export default class {
     if (firstTrackID !== 'first') this._shuffledList.unshift(firstTrackID);
   }
   async _scrobble(track, time, completed = false) {
-    console.debug(
-      `[debug][Player.js] scrobble track 👉 ${track.name} by ${track.ar[0].name} 👉 time:${time} completed: ${completed}`
-    );
+    if (DEBUG_MODE) {
+      console.debug(
+        `[debug][Player.js] scrobble track 👉 ${track.name} by ${track.ar[0].name} 👉 time:${time} completed: ${completed}`
+      );
+    }
     const trackDuration = ~~(track.dt / 1000);
     time = completed ? trackDuration : ~~time;
     scrobble({
@@ -380,7 +385,7 @@ export default class {
       try {
         this._howler.unload();
       } catch (e) {
-        console.debug('[Player.js] Error unloading howler:', e);
+        if (DEBUG_MODE) console.debug('[Player.js] Error unloading howler:', e);
       }
       this._howler = null;
     }
@@ -389,7 +394,9 @@ export default class {
     try {
       Howler.unload();
     } catch (e) {
-      console.debug('[Player.js] Error unloading Howler globally:', e);
+      if (DEBUG_MODE) {
+        console.debug('[Player.js] Error unloading Howler globally:', e);
+      }
     }
 
     this._howler = new Howl({
@@ -440,7 +447,9 @@ export default class {
       try {
         URL.revokeObjectURL(url);
       } catch (e) {
-        console.debug('[Player.js] Failed to revoke blob URL:', e);
+        if (DEBUG_MODE) {
+          console.debug('[Player.js] Failed to revoke blob URL:', e);
+        }
       }
     }
 
@@ -501,33 +510,41 @@ export default class {
     return fetch(apiUrl)
       .then(response => {
         if (!response.ok) {
-          console.debug(
-            `[debug][Player.js] 新API请求失败: HTTP ${response.status}`
-          );
+          if (DEBUG_MODE) {
+            console.debug(
+              `[debug][Player.js] 新API请求失败: HTTP ${response.status}`
+            );
+          }
           return null;
         }
         return response.json();
       })
       .then(data => {
         if (!data || !data.url) {
-          console.debug(
-            `[debug][Player.js] 新API返回数据无效，歌曲ID: ${track.id}`
-          );
+          if (DEBUG_MODE) {
+            console.debug(
+              `[debug][Player.js] 新API返回数据无效，歌曲ID: ${track.id}`
+            );
+          }
           return null;
         }
         // 🔥 记录响应时间
         const responseTime = Date.now() - startTime;
         this._recordApiResponseTime('gdmusic', responseTime);
-        console.debug(`[Player.js] gdmusic API 响应时间: ${responseTime}ms`);
+        if (DEBUG_MODE) {
+          console.debug(`[Player.js] gdmusic API 响应时间: ${responseTime}ms`);
+        }
 
         // 强制使用HTTPS协议
         const audioUrl = data.url.replace(/^http:/, 'https:');
         return audioUrl;
       })
       .catch(error => {
-        console.debug(
-          `[debug][Player.js] 新API异常: ${error.message}，歌曲ID: ${track.id}`
-        );
+        if (DEBUG_MODE) {
+          console.debug(
+            `[debug][Player.js] 新API异常: ${error.message}，歌曲ID: ${track.id}`
+          );
+        }
         return null;
       });
   }
@@ -543,7 +560,9 @@ export default class {
         // 🔥 记录响应时间
         const responseTime = Date.now() - startTime;
         this._recordApiResponseTime('netease', responseTime);
-        console.debug(`[Player.js] 网易云 API 响应时间: ${responseTime}ms`);
+        if (DEBUG_MODE) {
+          console.debug(`[Player.js] 网易云 API 响应时间: ${responseTime}ms`);
+        }
 
         const source = result.data[0].url.replace(/^http:/, 'https:');
         if (store.state.settings.automaticallyCacheSongs) {
@@ -558,7 +577,9 @@ export default class {
     }
   }
   async _getAudioSourceFromUnblockMusic(track) {
-    console.debug(`[debug][Player.js] _getAudioSourceFromUnblockMusic`);
+    if (DEBUG_MODE) {
+      console.debug(`[debug][Player.js] _getAudioSourceFromUnblockMusic`);
+    }
 
     if (
       process.env.IS_ELECTRON !== true ||
@@ -650,11 +671,13 @@ export default class {
 
     // 平均值 * 1.5 作为超时时间，最小1秒，最大5秒
     const timeout = Math.min(Math.max(avg * 1.5, 1000), 5000);
-    console.debug(
-      `[Player.js] ${apiName} 平均响应时间: ${avg.toFixed(
-        0
-      )}ms, 动态超时: ${timeout.toFixed(0)}ms`
-    );
+    if (DEBUG_MODE) {
+      console.debug(
+        `[Player.js] ${apiName} 平均响应时间: ${avg.toFixed(
+          0
+        )}ms, 动态超时: ${timeout.toFixed(0)}ms`
+      );
+    }
 
     return timeout;
   }
@@ -689,9 +712,11 @@ export default class {
 
         if (isVip) {
           // 会员用户：优先使用网易云官方源
-          console.debug(
-            `[Player.js] 会员用户，优先网易云 API（超时: ${neteaseTimeout}ms）`
-          );
+          if (DEBUG_MODE) {
+            console.debug(
+              `[Player.js] 会员用户，优先网易云 API（超时: ${neteaseTimeout}ms）`
+            );
+          }
 
           const neteaseSource = await Promise.race([
             neteasePromise,
@@ -701,21 +726,25 @@ export default class {
           ]);
 
           if (neteaseSource) {
-            console.debug(`[Player.js] 网易云 API 成功`);
+            if (DEBUG_MODE) console.debug(`[Player.js] 网易云 API 成功`);
             return neteaseSource;
           }
 
-          console.debug(`[Player.js] 网易云 API 失败/超时，尝试 gdmusic API`);
+          if (DEBUG_MODE) {
+            console.debug(`[Player.js] 网易云 API 失败/超时，尝试 gdmusic API`);
+          }
           const newApiSource = await newApiPromise;
           if (newApiSource) {
-            console.debug(`[Player.js] gdmusic API 成功`);
+            if (DEBUG_MODE) console.debug(`[Player.js] gdmusic API 成功`);
             return newApiSource;
           }
         } else {
           // 非会员用户：优先使用 gdmusic（无试听限制）
-          console.debug(
-            `[Player.js] 非会员用户，优先 gdmusic API（超时: ${gdmusicTimeout}ms）`
-          );
+          if (DEBUG_MODE) {
+            console.debug(
+              `[Player.js] 非会员用户，优先 gdmusic API（超时: ${gdmusicTimeout}ms）`
+            );
+          }
 
           const newApiSource = await Promise.race([
             newApiPromise,
@@ -725,19 +754,23 @@ export default class {
           ]);
 
           if (newApiSource) {
-            console.debug(`[Player.js] gdmusic API 成功`);
+            if (DEBUG_MODE) console.debug(`[Player.js] gdmusic API 成功`);
             return newApiSource;
           }
 
-          console.debug(`[Player.js] gdmusic API 失败/超时，尝试网易云 API`);
+          if (DEBUG_MODE) {
+            console.debug(`[Player.js] gdmusic API 失败/超时，尝试网易云 API`);
+          }
           const neteaseSource = await neteasePromise;
           if (neteaseSource) {
-            console.debug(`[Player.js] 网易云 API 成功`);
+            if (DEBUG_MODE) console.debug(`[Player.js] 网易云 API 成功`);
             return neteaseSource;
           }
         }
 
-        console.debug(`[Player.js] 所有音源失败，尝试 UnblockMusic`);
+        if (DEBUG_MODE) {
+          console.debug(`[Player.js] 所有音源失败，尝试 UnblockMusic`);
+        }
         return this._getAudioSourceFromUnblockMusic(track);
       }
     );
@@ -1157,9 +1190,11 @@ export default class {
     });
   }
   playPlaylistByID(id, trackID = 'first', noCache = false) {
-    console.debug(
-      `[debug][Player.js] playPlaylistByID 👉 id:${id} trackID:${trackID} noCache:${noCache}`
-    );
+    if (DEBUG_MODE) {
+      console.debug(
+        `[debug][Player.js] playPlaylistByID 👉 id:${id} trackID:${trackID} noCache:${noCache}`
+      );
+    }
     getPlaylistDetail(id, noCache).then(data => {
       let trackIDs = data.playlist.trackIds.map(t => t.id);
       this.replacePlaylist(trackIDs, id, 'playlist', trackID);
