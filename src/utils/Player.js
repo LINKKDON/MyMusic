@@ -87,6 +87,13 @@ export default class {
       id: 0,
     }; // 私人FM下一首歌曲信息（为了快速加载下一首）
 
+    // 🔥 动态超时：记录API响应时间用于自适应超时
+    this._apiResponseTimes = {
+      gdmusic: [], // 记录最近10次gdmusic响应时间
+      netease: [], // 记录最近10次网易云响应时间
+      maxRecords: 10, // 最多记录10次
+    };
+
     /**
      * The blob records for cleanup.
      *
@@ -390,6 +397,7 @@ export default class {
       html5: true,
       preload: true,
       format: ['mp3', 'flac'],
+      pool: 1, // 🔥 限制音频池大小为1，防止耗尽
       onend: () => {
         this._nextTrackCallback();
       },
@@ -452,6 +460,8 @@ export default class {
     });
   }
   _getAudioSourceFromNewAPI(track) {
+    const startTime = Date.now();
+
     // 获取用户音质设置并映射到新API的br参数
     const quality = store.state.settings?.musicQuality ?? '320000';
     let br;
@@ -505,6 +515,11 @@ export default class {
           );
           return null;
         }
+        // 🔥 记录响应时间
+        const responseTime = Date.now() - startTime;
+        this._recordApiResponseTime('gdmusic', responseTime);
+        console.debug(`[Player.js] gdmusic API 响应时间: ${responseTime}ms`);
+
         // 强制使用HTTPS协议
         const audioUrl = data.url.replace(/^http:/, 'https:');
         return audioUrl;
@@ -517,11 +532,19 @@ export default class {
       });
   }
   _getAudioSourceFromNetease(track) {
+    const startTime = Date.now();
+
     if (isAccountLoggedIn()) {
       return getMP3(track.id).then(result => {
         if (!result.data[0]) return null;
         if (!result.data[0].url) return null;
         if (result.data[0].freeTrialInfo !== null) return null; // 跳过只能试听的歌曲
+
+        // 🔥 记录响应时间
+        const responseTime = Date.now() - startTime;
+        this._recordApiResponseTime('netease', responseTime);
+        console.debug(`[Player.js] 网易云 API 响应时间: ${responseTime}ms`);
+
         const source = result.data[0].url.replace(/^http:/, 'https:');
         if (store.state.settings.automaticallyCacheSongs) {
           cacheTrackSource(track, source, result.data[0].br);
@@ -602,6 +625,38 @@ export default class {
     const buffer = base642Buffer(retrieveSongInfo.url);
     return this._getAudioSourceBlobURL(buffer);
   }
+  // 🔥 记录API响应时间
+  _recordApiResponseTime(apiName, time) {
+    const records = this._apiResponseTimes[apiName];
+    if (!records) return;
+
+    records.push(time);
+    // 只保留最近10次记录
+    if (records.length > this._apiResponseTimes.maxRecords) {
+      records.shift();
+    }
+  }
+
+  // 🔥 计算API平均响应时间
+  _getAverageResponseTime(apiName) {
+    const records = this._apiResponseTimes[apiName];
+    if (!records || records.length === 0) {
+      // 没有历史数据，返回默认值
+      return apiName === 'gdmusic' ? 2500 : 1000;
+    }
+
+    const sum = records.reduce((a, b) => a + b, 0);
+    const avg = sum / records.length;
+
+    // 平均值 * 1.5 作为超时时间，最小1秒，最大5秒
+    const timeout = Math.min(Math.max(avg * 1.5, 1000), 5000);
+    console.debug(
+      `[Player.js] ${apiName} 平均响应时间: ${avg.toFixed(0)}ms, 动态超时: ${timeout.toFixed(0)}ms`
+    );
+
+    return timeout;
+  }
+
   _getAudioSource(track) {
     // 未登录时不使用新API，防止滥用
     if (!isAccountLoggedIn()) {
@@ -617,41 +672,73 @@ export default class {
     // 已登录：根据会员状态决定API优先级
     const isVip = store.state.data?.user?.vipType > 0;
 
-    return this._getAudioSourceFromCache(String(track.id)).then(source => {
-      if (source) return source;
+    return this._getAudioSourceFromCache(String(track.id)).then(
+      async source => {
+        if (source) return source;
 
-      // 并行请求两个API，谁快用谁
-      const neteasePromise = this._getAudioSourceFromNetease(track);
-      const newApiPromise = this._getAudioSourceFromNewAPI(track);
+        // 🔥 智能混合策略：并行启动，动态超时降级
+        // 根据历史响应时间计算超时
+        const gdmusicTimeout = this._getAverageResponseTime('gdmusic');
+        const neteaseTimeout = this._getAverageResponseTime('netease');
 
-      // 会员用户：优先使用网易云官方源
-      if (isVip) {
-        return Promise.race([
-          neteasePromise,
-          // 给网易云100ms优先时间，之后如果新API先返回也接受
-          new Promise(resolve => {
-            setTimeout(() => {
-              newApiPromise.then(resolve);
-            }, 100);
-          }),
-        ]).then(source => {
-          return source ?? this._getAudioSourceFromUnblockMusic(track);
-        });
+        // 并行启动两个请求
+        const neteasePromise = this._getAudioSourceFromNetease(track);
+        const newApiPromise = this._getAudioSourceFromNewAPI(track);
+
+        if (isVip) {
+          // 会员用户：优先使用网易云官方源
+          console.debug(
+            `[Player.js] 会员用户，优先网易云 API（超时: ${neteaseTimeout}ms）`
+          );
+
+          const neteaseSource = await Promise.race([
+            neteasePromise,
+            new Promise(resolve =>
+              setTimeout(() => resolve(null), neteaseTimeout)
+            ),
+          ]);
+
+          if (neteaseSource) {
+            console.debug(`[Player.js] 网易云 API 成功`);
+            return neteaseSource;
+          }
+
+          console.debug(`[Player.js] 网易云 API 失败/超时，尝试 gdmusic API`);
+          const newApiSource = await newApiPromise;
+          if (newApiSource) {
+            console.debug(`[Player.js] gdmusic API 成功`);
+            return newApiSource;
+          }
+        } else {
+          // 非会员用户：优先使用 gdmusic（无试听限制）
+          console.debug(
+            `[Player.js] 非会员用户，优先 gdmusic API（超时: ${gdmusicTimeout}ms）`
+          );
+
+          const newApiSource = await Promise.race([
+            newApiPromise,
+            new Promise(resolve =>
+              setTimeout(() => resolve(null), gdmusicTimeout)
+            ),
+          ]);
+
+          if (newApiSource) {
+            console.debug(`[Player.js] gdmusic API 成功`);
+            return newApiSource;
+          }
+
+          console.debug(`[Player.js] gdmusic API 失败/超时，尝试网易云 API`);
+          const neteaseSource = await neteasePromise;
+          if (neteaseSource) {
+            console.debug(`[Player.js] 网易云 API 成功`);
+            return neteaseSource;
+          }
+        }
+
+        console.debug(`[Player.js] 所有音源失败，尝试 UnblockMusic`);
+        return this._getAudioSourceFromUnblockMusic(track);
       }
-
-      // 非会员用户：优先使用gdmusic（无试听问题）
-      return Promise.race([
-        newApiPromise,
-        // 给新API 100ms优先时间
-        new Promise(resolve => {
-          setTimeout(() => {
-            neteasePromise.then(resolve);
-          }, 100);
-        }),
-      ]).then(source => {
-        return source ?? this._getAudioSourceFromUnblockMusic(track);
-      });
-    });
+    );
   }
   _replaceCurrentTrack(
     id,
