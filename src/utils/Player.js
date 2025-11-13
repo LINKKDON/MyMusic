@@ -460,7 +460,7 @@ export default class {
       }
     }
 
-    const apiUrl = `https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=${track.id}&br=${br}`;
+    const apiUrl = `/gdmusic/api.php?types=url&source=netease&id=${track.id}&br=${br}`;
     return fetch(apiUrl)
       .then(response => {
         if (!response.ok) {

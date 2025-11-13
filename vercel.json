@@ -3,6 +3,10 @@
     {
       "source": "/api/:match*",
       "destination": "https://music-api-enhanced.332209.xyz/:match*"
+    },
+    {
+      "source": "/gdmusic/api.php",
+      "destination": "https://music-api.gdstudio.xyz/api.php"
     }
   ],
   "build": {
