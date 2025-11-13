@@ -74,7 +74,7 @@ player = new Proxy(player, {
     // console.log({ prop, val });
     target[prop] = val;
     if (prop === '_howler') return true;
-    
+
     // 使用防抖函数优化localStorage写入频率
     debouncedSave(target);
     target.sendSelfToIpcMain();
