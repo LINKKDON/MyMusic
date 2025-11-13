@@ -62,7 +62,7 @@ scoop install extras/yesplaymusic
 
 #### 1️⃣ 准备 API 服务
 
-部署网易云 API → [查看教程](https://github.com/Binaryify/NeteaseCloudMusicApi#%E9%83%A8%E7%BD%B2)
+部署网易云 API → [查看教程]([https://github.com/Binaryify/NeteaseCloudMusicApi#%E9%83%A8%E7%BD%B2](https://neteasecloudmusicapienhanced.js.org/#/?id=%e5%ae%89%e8%a3%85)
 
 💡 推荐使用增强版 API，支持更多功能，推荐部署到 Vercel
 
