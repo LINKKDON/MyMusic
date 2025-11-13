@@ -163,4 +163,5 @@ yarn electron:build --macos dir:arm64
 ## 🙏 鸣谢
 
 - API: [NeteaseCloudMusicApiEnhanced](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)
+- API: [GD音乐台](https://music.gdstudio.xyz)
 - 设计灵感: Apple Music • YouTube Music • Spotify
