@@ -11,6 +11,19 @@ import { getSendSettingsPlugin } from './plugins/sendSettings';
 
 Vue.use(Vuex);
 
+// 防抖函数 - 用于优化localStorage写入频率
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
 let plugins = [saveToLocalStorage];
 if (process.env.IS_ELECTRON === true) {
   let sendSettings = getSendSettingsPlugin();
@@ -52,12 +65,18 @@ window
   });
 
 let player = new Player();
+
+// 创建防抖的保存函数 - 500ms内的多次写入会被合并为一次
+const debouncedSave = debounce(target => target.saveSelfToLocalStorage(), 500);
+
 player = new Proxy(player, {
   set(target, prop, val) {
     // console.log({ prop, val });
     target[prop] = val;
     if (prop === '_howler') return true;
-    target.saveSelfToLocalStorage();
+    
+    // 使用防抖函数优化localStorage写入频率
+    debouncedSave(target);
     target.sendSelfToIpcMain();
     return true;
   },

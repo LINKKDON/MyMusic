@@ -71,6 +71,7 @@ export default class {
     this._personalFMLoading = false; // 是否正在私人FM中加载新的track
     this._personalFMNextLoading = false; // 是否正在缓存私人FM的下一首歌曲
     this._progressInterval = null; // 播放进度同步定时器
+    this._lastSavedProgress = 0; // 上次保存的进度，用于减少不必要的写入
 
     // 播放信息
     this._list = []; // 播放列表
@@ -252,11 +253,17 @@ export default class {
       clearInterval(this._progressInterval);
     }
 
-    // 同步播放进度
+    // 同步播放进度，优化localStorage写入频率
     this._progressInterval = setInterval(() => {
       if (this._howler === null) return;
       this._progress = this._howler.seek();
-      localStorage.setItem('playerCurrentTrackTime', this._progress);
+
+      // 只有当进度变化超过3秒时才写入localStorage，减少写入频率
+      if (Math.abs(this._progress - this._lastSavedProgress) >= 3) {
+        localStorage.setItem('playerCurrentTrackTime', this._progress);
+        this._lastSavedProgress = this._progress;
+      }
+
       if (isCreateMpris) {
         ipcRenderer?.send('playerCurrentTrackTime', this._progress);
       }
