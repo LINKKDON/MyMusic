@@ -651,7 +651,9 @@ export default class {
     // 平均值 * 1.5 作为超时时间，最小1秒，最大5秒
     const timeout = Math.min(Math.max(avg * 1.5, 1000), 5000);
     console.debug(
-      `[Player.js] ${apiName} 平均响应时间: ${avg.toFixed(0)}ms, 动态超时: ${timeout.toFixed(0)}ms`
+      `[Player.js] ${apiName} 平均响应时间: ${avg.toFixed(
+        0
+      )}ms, 动态超时: ${timeout.toFixed(0)}ms`
     );
 
     return timeout;
