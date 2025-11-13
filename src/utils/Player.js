@@ -507,7 +507,17 @@ export default class {
     //    - 修改下方 apiUrl 中的路径（如：/music-source/v2/stream.php）
     //    - 保持查询参数不变
     const apiUrl = `/music-source/api.php?types=url&source=netease&id=${track.id}&br=${br}`;
-    return fetch(apiUrl)
+    return fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        Referer: window.location.origin,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      credentials: 'same-origin',
+    })
       .then(response => {
         if (!response.ok) {
           if (DEBUG_MODE) {
