@@ -1,6 +1,6 @@
 <p align="center">
   <img src="images/logo.png" alt="Logo" width="156" height="156">
-  <h2 align="center">YesPlayMusic</h2>
+  <h2 align="center">MyMusic</h2>
   <p align="center">高颜值的第三方网易云播放器</p>
 </p>
 
