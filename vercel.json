@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:match*",
-      "destination": "https://music-api-enhanced.332209.xyz/:match*"
+      "destination": "https://music-api.linust.org/:match*"
     },
     {
       "source": "/music-source/api.php",
