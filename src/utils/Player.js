@@ -626,12 +626,7 @@ export default class {
             else cacheBitrate = parseInt(br) * 1000;
           }
 
-          cacheTrackSource(
-            track,
-            audioUrl,
-            cacheBitrate || 0,
-            config.name
-          );
+          cacheTrackSource(track, audioUrl, cacheBitrate || 0, config.name);
         }
 
         return audioUrl;
