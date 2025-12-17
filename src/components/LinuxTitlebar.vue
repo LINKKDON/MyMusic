@@ -87,6 +87,7 @@ export default {
   .title {
     padding: 8px;
     font-size: 12px;
+    /* prettier-ignore */
     font-family: 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
     justify-self: center;
     margin: 0 auto;

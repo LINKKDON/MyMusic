@@ -85,8 +85,8 @@ export default {
   padding: 6px;
   z-index: 1000;
   -webkit-app-region: no-drag;
-  transition: background 125ms ease-out, opacity 125ms ease-out,
-    transform 125ms ease-out;
+  /* prettier-ignore */
+  transition: background 125ms ease-out, opacity 125ms ease-out, transform 125ms ease-out;
 
   &:focus {
     outline: none;
@@ -123,6 +123,7 @@ export default {
   &:hover {
     color: var(--color-primary);
     background: var(--color-primary-bg-for-transparent);
+    /* prettier-ignore */
     transition: opacity 125ms ease-out, transform 125ms ease-out;
   }
   &:active {
