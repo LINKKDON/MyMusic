@@ -70,10 +70,21 @@ export function cacheTrackSource(trackInfo, url, bitRate, from = 'netease') {
     });
   }
 
-  return axios
-    .get(url, {
-      responseType: 'arraybuffer',
-    })
+  // 延迟缓存，避免与播放器起播竞争带宽
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      axios
+        .get(url, {
+          responseType: 'arraybuffer',
+        })
+        .then(response => {
+          resolve(response);
+        })
+        .catch(error => {
+          reject(error);
+        });
+    }, 10000); // 延迟 10 秒开始缓存下载
+  })
     .then(response => {
       db.trackSources.put({
         id: trackInfo.id,
