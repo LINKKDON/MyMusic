@@ -57,14 +57,31 @@ service.interceptors.request.use(function (config) {
       !process.env.IS_ELECTRON &&
       getCookie('MUSIC_U') !== null
     ) {
-      const existingCookie = config.params.cookie || '';
-      config.params.cookie = `MUSIC_U=${getCookie('MUSIC_U')};os=pc;${existingCookie}`;
+      const musicU = getCookie('MUSIC_U');
+      const cookies = (config.params.cookie || '')
+        .split(';')
+        .map(c => c.trim())
+        .filter(c => c.length > 0);
+
+      const cookieMap = {};
+      cookies.forEach(c => {
+        const i = c.indexOf('=');
+        if (i !== -1) cookieMap[c.substring(0, i)] = c.substring(i + 1);
+      });
+
+      // 覆盖/添加
+      if (musicU) cookieMap['MUSIC_U'] = musicU;
+      cookieMap['os'] = 'pc';
+
+      config.params.cookie = Object.entries(cookieMap)
+        .map(([k, v]) => `${k}=${v}`)
+        .join(';');
     }
   } else {
     console.error("You must set up the baseURL in the service's config");
   }
 
-  if (!process.env.IS_ELECTRON && !config.url.includes('/login')) {
+  if (!process.env.IS_ELECTRON && !config.url?.includes('/login')) {
     config.params.randomCNIP = true;
   }
 
@@ -88,15 +105,17 @@ service.interceptors.response.use(
   response => {
     const res = response.data;
 
-    // 递归处理所有图片 URL，将 HTTP 转换为 HTTPS
+    // 递归处理所有图片 URL，将 HTTP 转换为 HTTPS (原地修改以提升性能)
     function httpsifyImageUrls(obj) {
       if (!obj || typeof obj !== 'object') return obj;
 
       if (Array.isArray(obj)) {
-        return obj.map(item => httpsifyImageUrls(item));
+        for (let i = 0; i < obj.length; i++) {
+          httpsifyImageUrls(obj[i]);
+        }
+        return obj;
       }
 
-      const result = {};
       for (const key in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, key)) {
           const value = obj[key];
@@ -112,28 +131,25 @@ service.interceptors.response.use(
               key === 'cover' ||
               key === 'avatar')
           ) {
-            result[key] = updateHttps(value);
-          } else if (typeof value === 'object') {
-            result[key] = httpsifyImageUrls(value);
-          } else {
-            result[key] = value;
+            if (value.startsWith('http:')) {
+              obj[key] = updateHttps(value);
+            }
+          } else if (typeof value === 'object' && value !== null) {
+            httpsifyImageUrls(value);
           }
         }
       }
-      return result;
+      return obj;
     }
 
-    return httpsifyImageUrls(res);
+    httpsifyImageUrls(res);
+    return res;
   },
   async error => {
     /** @type {import('axios').AxiosResponse | null} */
     let response;
     let data;
-    if (error === 'TypeError: baseURL is undefined') {
-      response = error;
-      data = error;
-      console.error("You must set up the baseURL in the service's config");
-    } else if (error.response) {
+    if (error.response) {
       response = error.response;
       data = response.data;
     }
@@ -156,6 +172,8 @@ service.interceptors.response.use(
         router.push({ name: 'login' });
       }
     }
+
+    return Promise.reject(error);
   }
 );
 
