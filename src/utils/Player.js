@@ -621,10 +621,13 @@ export default class {
             // 如果 br > 1000，假设是 bps (如 320000)，否则是 kbps (如 320)
             cacheBitrate = br > 1000 ? br : br * 1000;
           } else if (typeof br === 'string') {
-            if (br.includes('bit'))
+            if (br.includes('bit')) {
               cacheBitrate = 1400000; // flac24bit
-            else if (br === 'flac') cacheBitrate = 999000;
-            else cacheBitrate = parseInt(br) * 1000;
+            } else if (br === 'flac') {
+              cacheBitrate = 999000;
+            } else {
+              cacheBitrate = parseInt(br) * 1000;
+            }
           }
 
           cacheTrackSource(track, audioUrl, cacheBitrate || 0, config.name);
