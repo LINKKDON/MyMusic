@@ -18,7 +18,7 @@ export function getMP3(id) {
   const getLevel = () => {
     const quality = store.state.settings?.musicQuality ?? '320000';
     if (quality === 'flac') return 'lossless';
-    if (parseInt(quality) >= 999000) return 'lossless';
+    if (parseInt(quality) >= 999000) return 'hires';
     if (parseInt(quality) >= 320000) return 'exhigh';
     if (parseInt(quality) >= 192000) return 'higher';
     return 'standard';
