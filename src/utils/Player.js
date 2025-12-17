@@ -16,6 +16,9 @@ const PLAY_PAUSE_FADE_DURATION = 200;
 
 const INDEX_IN_PLAY_NEXT = -1;
 
+// 第三方音乐源 API，用于非会员用户获取音频
+const UNOFFICIAL_MUSIC_API_URL = 'https://music-api.gdstudio.xyz/api.php';
+
 // 🔥 性能优化：开发模式开关，生产环境关闭所有调试日志
 const DEBUG_MODE = process.env.NODE_ENV === 'development';
 
@@ -89,13 +92,6 @@ export default class {
     this._personalFMNextTrack = {
       id: 0,
     }; // 私人FM下一首歌曲信息（为了快速加载下一首）
-
-    // 🔥 动态超时：记录API响应时间用于自适应超时
-    this._apiResponseTimes = {
-      gdmusic: [], // 记录最近10次gdmusic响应时间
-      netease: [], // 记录最近10次网易云响应时间
-      maxRecords: 10, // 最多记录10次
-    };
 
     /**
      * The blob records for cleanup.
@@ -441,6 +437,39 @@ export default class {
     }
     this.setOutputDevice();
   }
+  /**
+   * 类似于 Promise.any，但只要有一个 Promise 返回非 null 值就立即 resolve
+   * @param {Promise<any>[]} promises
+   */
+  _raceToSuccess(promises) {
+    return new Promise(resolve => {
+      let resolvedCount = 0;
+      let hasResolvedValid = false;
+      const total = promises.length;
+
+      promises.forEach(p => {
+        p.then(result => {
+          if (hasResolvedValid) return; // 已经有成功结果了，忽略后续
+          if (result !== null && result !== undefined) {
+            hasResolvedValid = true;
+            resolve(result);
+          } else {
+            resolvedCount++;
+            if (resolvedCount === total) {
+              resolve(null); // 所有都完成了，但没有有效结果
+            }
+          }
+        }).catch(() => {
+          if (hasResolvedValid) return;
+          resolvedCount++;
+          if (resolvedCount === total) {
+            resolve(null);
+          }
+        });
+      });
+    });
+  }
+
   _getAudioSourceBlobURL(data) {
     // 立即清理所有旧的 Blob URLs，释放内存
     for (const url of this.createdBlobRecords) {
@@ -469,8 +498,6 @@ export default class {
     });
   }
   _getAudioSourceFromNewAPI(track) {
-    const startTime = Date.now();
-
     // 获取用户音质设置并映射到新API的br参数
     const quality = store.state.settings?.musicQuality ?? '320000';
     let br;
@@ -496,17 +523,20 @@ export default class {
       }
     }
 
-    // 方案B：通过Vercel代理访问第三方音乐源API
-    // 使用相对路径 /music-source/api.php，由 vercel.json 代理到实际的API地址
-    // 优点：统一通过Vercel管理所有API，便于切换和维护
-    //
-    // 维护说明：
-    // 1. 仅更换API域名：只需修改 vercel.json 中的 destination 域名部分
-    // 2. API路径也变化（如 api.php → v2/stream.php）：
-    //    - 修改 vercel.json 中的 source 和 destination 路径
-    //    - 修改下方 apiUrl 中的路径（如：/music-source/v2/stream.php）
-    //    - 保持查询参数不变
-    const apiUrl = `/music-source/api.php?types=url&source=netease&id=${track.id}&br=${br}`;
+    // 方案B：直接访问第三方音乐源API
+    let apiUrl;
+    try {
+      const urlObj = new URL(UNOFFICIAL_MUSIC_API_URL);
+      urlObj.searchParams.append('types', 'url');
+      urlObj.searchParams.append('source', 'netease');
+      urlObj.searchParams.append('id', track.id);
+      urlObj.searchParams.append('br', br);
+      apiUrl = urlObj.toString();
+    } catch (e) {
+      console.warn(`[Player.js] Invalid API URL: ${UNOFFICIAL_MUSIC_API_URL}`);
+      return Promise.resolve(null);
+    }
+
     return fetch(apiUrl, {
       method: 'GET',
       headers: {
@@ -529,23 +559,40 @@ export default class {
         return response.json();
       })
       .then(data => {
-        if (!data || !data.url || data.url === '') {
+        // 兼容不同的返回结构
+        let url = null;
+        let isValid = false;
+
+        if (data?.url) {
+          // 结构 A: { url: "..." }
+          url = data.url;
+          isValid = true;
+        } else if (data?.data?.[0]?.url) {
+          // 结构 B: { data: [ { url: "...", code: 200 } ] }
+          const songObj = data.data[0];
+          if (songObj.code === 200) {
+            url = songObj.url;
+            isValid = true;
+          } else {
+            if (DEBUG_MODE) {
+              console.debug(
+                `[debug][Player.js] 新API返回错误码: ${songObj.code}，歌曲ID: ${track.id}`
+              );
+            }
+          }
+        }
+
+        if (!isValid || !url) {
           if (DEBUG_MODE) {
             console.debug(
-              `[debug][Player.js] 新API返回数据无效，歌曲ID: ${track.id}`
+              `[debug][Player.js] 新API返回数据无效或无播放地址，歌曲ID: ${track.id}`
             );
           }
           return null;
         }
-        // 🔥 记录响应时间
-        const responseTime = Date.now() - startTime;
-        this._recordApiResponseTime('gdmusic', responseTime);
-        if (DEBUG_MODE) {
-          console.debug(`[Player.js] gdmusic API 响应时间: ${responseTime}ms`);
-        }
 
         // 强制使用HTTPS协议
-        const audioUrl = data.url.replace(/^http:/, 'https:');
+        const audioUrl = url.replace(/^http:/, 'https:');
 
         // 🔥 缓存 gdmusic 音源到 IndexedDB
         if (store.state.settings.automaticallyCacheSongs) {
@@ -565,21 +612,12 @@ export default class {
       });
   }
   _getAudioSourceFromNetease(track) {
-    const startTime = Date.now();
-
     if (isAccountLoggedIn()) {
       return getMP3(track.id).then(result => {
         if (!result.data[0]) return null;
         if (!result.data[0].url) return null;
         if (result.data[0].code !== 200) return null; // 检查资源状态码
         if (result.data[0].freeTrialInfo !== null) return null; // 跳过只能试听的歌曲
-
-        // 🔥 记录响应时间
-        const responseTime = Date.now() - startTime;
-        this._recordApiResponseTime('netease', responseTime);
-        if (DEBUG_MODE) {
-          console.debug(`[Player.js] 网易云 API 响应时间: ${responseTime}ms`);
-        }
 
         const source = result.data[0].url.replace(/^http:/, 'https:');
         if (store.state.settings.automaticallyCacheSongs) {
@@ -663,41 +701,6 @@ export default class {
     const buffer = base642Buffer(retrieveSongInfo.url);
     return this._getAudioSourceBlobURL(buffer);
   }
-  // 🔥 记录API响应时间
-  _recordApiResponseTime(apiName, time) {
-    const records = this._apiResponseTimes[apiName];
-    if (!records) return;
-
-    records.push(time);
-    // 只保留最近10次记录
-    if (records.length > this._apiResponseTimes.maxRecords) {
-      records.shift();
-    }
-  }
-
-  // 🔥 计算API平均响应时间
-  _getAverageResponseTime(apiName) {
-    const records = this._apiResponseTimes[apiName];
-    if (!records || records.length === 0) {
-      // 没有历史数据，返回默认值
-      return apiName === 'gdmusic' ? 2500 : 1000;
-    }
-
-    const sum = records.reduce((a, b) => a + b, 0);
-    const avg = sum / records.length;
-
-    // 平均值 * 1.5 作为超时时间，最小1秒，最大3秒
-    const timeout = Math.min(Math.max(avg * 1.5, 1000), 3000);
-    if (DEBUG_MODE) {
-      console.debug(
-        `[Player.js] ${apiName} 平均响应时间: ${avg.toFixed(
-          0
-        )}ms, 动态超时: ${timeout.toFixed(0)}ms`
-      );
-    }
-
-    return timeout;
-  }
 
   _getAudioSource(track) {
     // 未登录时不使用新API，防止滥用
@@ -718,70 +721,37 @@ export default class {
       async source => {
         if (source) return source;
 
-        // 🔥 智能混合策略：并行启动，动态超时降级
-        // 根据历史响应时间计算超时
-        const gdmusicTimeout = this._getAverageResponseTime('gdmusic');
-        const neteaseTimeout = this._getAverageResponseTime('netease');
-
-        // 并行启动两个请求
-        const neteasePromise = this._getAudioSourceFromNetease(track);
-        const newApiPromise = this._getAudioSourceFromNewAPI(track);
-
         if (isVip) {
-          // 会员用户：优先使用网易云官方源
+          // 会员用户：只使用网易云官方源
           if (DEBUG_MODE) {
-            console.debug(
-              `[Player.js] 会员用户，优先网易云 API（超时: ${neteaseTimeout}ms）`
-            );
+            console.debug(`[Player.js] 会员用户，仅使用网易云 API`);
           }
-
-          const neteaseSource = await Promise.race([
-            neteasePromise,
-            new Promise(resolve =>
-              setTimeout(() => resolve(null), neteaseTimeout)
-            ),
-          ]);
-
+          const neteaseSource = await this._getAudioSourceFromNetease(track);
           if (neteaseSource) {
             if (DEBUG_MODE) console.debug(`[Player.js] 网易云 API 成功`);
             return neteaseSource;
-          }
-
-          if (DEBUG_MODE) {
-            console.debug(`[Player.js] 网易云 API 失败/超时，尝试 gdmusic API`);
-          }
-          const newApiSource = await newApiPromise;
-          if (newApiSource) {
-            if (DEBUG_MODE) console.debug(`[Player.js] gdmusic API 成功`);
-            return newApiSource;
           }
         } else {
-          // 非会员用户：优先使用 gdmusic（无试听限制）
+          // 非会员用户：采用并行竞速策略 (First Valid Wins)
+          // 同时请求官方源和新API，谁先返回有效地址就用谁
           if (DEBUG_MODE) {
             console.debug(
-              `[Player.js] 非会员用户，优先 gdmusic API（超时: ${gdmusicTimeout}ms）`
+              `[Player.js] 非会员用户，并行请求官方源和新API，竞速模式`
             );
           }
 
-          const newApiSource = await Promise.race([
-            newApiPromise,
-            new Promise(resolve =>
-              setTimeout(() => resolve(null), gdmusicTimeout)
-            ),
+          const source = await this._raceToSuccess([
+            this._getAudioSourceFromNetease(track),
+            this._getAudioSourceFromNewAPI(track),
           ]);
 
-          if (newApiSource) {
-            if (DEBUG_MODE) console.debug(`[Player.js] gdmusic API 成功`);
-            return newApiSource;
+          if (source) {
+            if (DEBUG_MODE) console.debug(`[Player.js] 竞速成功，获取到音源`);
+            return source;
           }
 
           if (DEBUG_MODE) {
-            console.debug(`[Player.js] gdmusic API 失败/超时，尝试网易云 API`);
-          }
-          const neteaseSource = await neteasePromise;
-          if (neteaseSource) {
-            if (DEBUG_MODE) console.debug(`[Player.js] 网易云 API 成功`);
-            return neteaseSource;
+            console.debug(`[Player.js] 所有音源均返回空`);
           }
         }
 

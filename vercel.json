@@ -3,10 +3,6 @@
     {
       "source": "/api/:match*",
       "destination": "https://music-api.linust.org/:match*"
-    },
-    {
-      "source": "/music-source/api.php",
-      "destination": "https://music-api.gdstudio.xyz/api.php"
     }
   ],
   "build": {
