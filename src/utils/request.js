@@ -64,7 +64,7 @@ service.interceptors.request.use(function (config) {
   }
 
   if (!process.env.IS_ELECTRON && !config.url.includes('/login')) {
-    config.params.realIP = '211.161.244.70';
+    config.params.randomCNIP = true;
   }
 
   // Force real_ip - 使用缓存的设置
