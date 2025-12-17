@@ -16,8 +16,28 @@ const PLAY_PAUSE_FADE_DURATION = 200;
 
 const INDEX_IN_PLAY_NEXT = -1;
 
-// 第三方音乐源 API，用于非会员用户获取音频
-const UNOFFICIAL_MUSIC_API_URL = 'https://music-api.gdstudio.xyz/api.php';
+// 第三方音乐源 API 配置
+const UNOFFICIAL_MUSIC_API = {
+  name: 'sayqz', // 用于缓存来源标识
+  url: 'https://music-dl.sayqz.com/api/',
+  // 行为模式: 'redirect' (302直链) 或 'json' (解析响应)
+  behavior: 'redirect',
+  // 参数配置 (键值对将作为 Query Params)
+  params: {
+    source: 'netease',
+    type: 'url', // gdmusic 用 'types', tunefree 用 'type'
+    id: 'id', // 歌曲 ID 参数名
+    br: 'br', // 音质参数名
+  },
+  // 音质值映射
+  qualityMap: {
+    standard: '128k', // 128k
+    higher: '192k', // 192k
+    exhigh: '320k', // 320k
+    lossless: 'flac', // 无损
+    hires: 'flac24bit', // Hi-Res
+  },
+};
 
 // 🔥 性能优化：开发模式开关，生产环境关闭所有调试日志
 const DEBUG_MODE = process.env.NODE_ENV === 'development';
@@ -227,7 +247,9 @@ export default class {
     if (this._enabled) {
       // 恢复当前播放歌曲
       this._replaceCurrentTrack(this.currentTrackID, false).then(() => {
-        this._howler?.seek(localStorage.getItem('playerCurrentTrackTime') ?? 0);
+        this._howler?.seek(
+          Number(localStorage.getItem('playerCurrentTrackTime')) || 0
+        );
       }); // update audio source and init howler
       this._initMediaSession();
     }
@@ -325,14 +347,14 @@ export default class {
     return [this.list[next], next];
   }
   _getPrevTrack() {
-    const next = this._reversed ? this.current + 1 : this.current - 1;
+    let next = this._reversed ? this.current + 1 : this.current - 1;
 
     // 循环模式开启，则重新播放当前模式下的相对的下一首
     if (this.repeatMode === 'on') {
-      if (this._reversed && this.current === 0) {
+      if (this._reversed && this.current === this.list.length - 1) {
         // 倒序模式，当前歌曲是最后一首，则重新播放列表第一首
         return [this.list[0], 0];
-      } else if (this.list.length === this.current + 1) {
+      } else if (!this._reversed && this.current === 0) {
         // 正序模式，当前歌曲是第一首，则重新播放列表最后一首
         return [this.list[this.list.length - 1], this.list.length - 1];
       }
@@ -471,8 +493,13 @@ export default class {
   }
 
   _getAudioSourceBlobURL(data) {
-    // 立即清理所有旧的 Blob URLs，释放内存
-    for (const url of this.createdBlobRecords) {
+    // 创建新的 Blob URL
+    const source = URL.createObjectURL(new Blob([data]));
+    this.createdBlobRecords.push(source);
+
+    // 仅保留最近的 5 个 Blob URL，避免误删正在播放或预加载的音频
+    while (this.createdBlobRecords.length > 5) {
+      const url = this.createdBlobRecords.shift();
       try {
         URL.revokeObjectURL(url);
       } catch (e) {
@@ -481,13 +508,6 @@ export default class {
         }
       }
     }
-
-    // 清空记录
-    this.createdBlobRecords = [];
-
-    // 创建新的 Blob URL
-    const source = URL.createObjectURL(new Blob([data]));
-    this.createdBlobRecords.push(source);
 
     return source;
   }
@@ -498,51 +518,54 @@ export default class {
     });
   }
   _getAudioSourceFromNewAPI(track) {
-    // 获取用户音质设置并映射到新API的br参数
+    const config = UNOFFICIAL_MUSIC_API;
     const quality = store.state.settings?.musicQuality ?? '320000';
+    const qualityMap = config.qualityMap;
     let br;
 
-    // 将音质设置映射到API的br参数 (128/192/320/740/999)
-    if (quality === 'flac' || quality === '999000') {
-      br = 999; // 无损
-    } else if (quality === '320000') {
-      br = 320; // 高品质
-    } else if (quality === '192000') {
-      br = 192; // 较高品质
-    } else if (quality === '128000') {
-      br = 128; // 标准品质
-    } else {
-      // 处理其他可能的值，根据数值范围映射
+    // 音质映射
+    if (quality === '999000') br = qualityMap.hires;
+    else if (quality === 'flac') br = qualityMap.lossless;
+    else if (quality === '320000') br = qualityMap.exhigh;
+    else if (quality === '192000') br = qualityMap.higher;
+    else if (quality === '128000') br = qualityMap.standard;
+    else {
+      // 兼容数字型设置的区间判断
       const qualityNum = parseInt(quality);
-      if (qualityNum >= 320000) {
-        br = 320;
-      } else if (qualityNum >= 192000) {
-        br = 192;
-      } else {
-        br = 128;
-      }
+      if (qualityNum >= 999000) br = qualityMap.hires || qualityMap.lossless;
+      else if (qualityNum >= 320000) br = qualityMap.exhigh;
+      else if (qualityNum >= 192000) br = qualityMap.higher;
+      else br = qualityMap.standard;
     }
 
-    // 方案B：直接访问第三方音乐源API
+    // 构造请求 URL
     let apiUrl;
     try {
-      const urlObj = new URL(UNOFFICIAL_MUSIC_API_URL);
-      urlObj.searchParams.append('types', 'url');
-      urlObj.searchParams.append('source', 'netease');
-      urlObj.searchParams.append('id', track.id);
-      urlObj.searchParams.append('br', br);
+      const urlObj = new URL(config.url);
+      // 添加固定参数
+      for (const [key, value] of Object.entries(config.params)) {
+        if (key === 'id' || key === 'br') continue; // 跳过动态参数定义
+        urlObj.searchParams.append(key, value);
+      }
+      // 添加动态参数
+      urlObj.searchParams.append(config.params.id, track.id);
+      urlObj.searchParams.append(config.params.br, br);
       apiUrl = urlObj.toString();
     } catch (e) {
-      console.warn(`[Player.js] Invalid API URL: ${UNOFFICIAL_MUSIC_API_URL}`);
+      console.warn(`[Player.js] Invalid API URL: ${config.url}`);
       return Promise.resolve(null);
+    }
+
+    // 如果是 redirect 模式，直接返回 API URL，让播放器自己处理 302 跳转
+    // 这样可以避免 fetch 遇到的 CORS 问题和额外的网络请求延迟
+    if (config.behavior === 'redirect') {
+      return Promise.resolve(apiUrl);
     }
 
     return fetch(apiUrl, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'X-Requested-With': 'XMLHttpRequest',
       },
       credentials: 'same-origin',
@@ -559,26 +582,22 @@ export default class {
         return response.json();
       })
       .then(data => {
-        // 兼容不同的返回结构
         let url = null;
         let isValid = false;
 
+        // json 模式：智能解析（兼容 data.url 和 data.data[0].url）
         if (data?.url) {
-          // 结构 A: { url: "..." }
           url = data.url;
           isValid = true;
         } else if (data?.data?.[0]?.url) {
-          // 结构 B: { data: [ { url: "...", code: 200 } ] }
           const songObj = data.data[0];
           if (songObj.code === 200) {
             url = songObj.url;
             isValid = true;
-          } else {
-            if (DEBUG_MODE) {
-              console.debug(
-                `[debug][Player.js] 新API返回错误码: ${songObj.code}，歌曲ID: ${track.id}`
-              );
-            }
+          } else if (DEBUG_MODE) {
+            console.debug(
+              `[debug][Player.js] 新API返回错误码: ${songObj.code}，歌曲ID: ${track.id}`
+            );
           }
         }
 
@@ -594,10 +613,25 @@ export default class {
         // 强制使用HTTPS协议
         const audioUrl = url.replace(/^http:/, 'https:');
 
-        // 🔥 缓存 gdmusic 音源到 IndexedDB
+        // 🔥 缓存逻辑
         if (store.state.settings.automaticallyCacheSongs) {
-          // br * 1000 转换为比特率格式 (如 320 -> 320000)
-          cacheTrackSource(track, audioUrl, br * 1000, 'gdmusic');
+          // 尝试将 br 转换为数字用于存储 (如果是 '320k' 这种格式)
+          let cacheBitrate = 0;
+          if (typeof br === 'number') {
+            // 如果 br > 1000，假设是 bps (如 320000)，否则是 kbps (如 320)
+            cacheBitrate = br > 1000 ? br : br * 1000;
+          } else if (typeof br === 'string') {
+            if (br.includes('bit')) cacheBitrate = 1400000; // flac24bit
+            else if (br === 'flac') cacheBitrate = 999000;
+            else cacheBitrate = parseInt(br) * 1000;
+          }
+
+          cacheTrackSource(
+            track,
+            audioUrl,
+            cacheBitrate || 0,
+            config.name
+          );
         }
 
         return audioUrl;
@@ -919,7 +953,7 @@ export default class {
       lyrics: lyricContent.lrc.lyric,
     });
 
-    ipcRenderer.on('saveLyricFinished', () => {
+    ipcRenderer.once('saveLyricFinished', () => {
       ipcRenderer?.send('metadata', metadata);
     });
   }
@@ -994,7 +1028,10 @@ export default class {
   }
 
   appendTrack(trackID) {
-    this.list.append(trackID);
+    this._list.push(trackID);
+    if (this._shuffle) {
+      this._shuffledList.push(trackID);
+    }
   }
   playNextTrack() {
     // TODO: 切换歌曲时增加加载中的状态
@@ -1146,10 +1183,18 @@ export default class {
     if (this._howler?._sounds.length <= 0 || !this._howler?._sounds[0]._node) {
       return;
     }
-    this._howler?._sounds[0]._node.setSinkId(store.state.settings.outputDevice);
+    try {
+      this._howler?._sounds[0]._node
+        .setSinkId(store.state.settings.outputDevice)
+        .catch(err => {
+          console.warn('[Player.js] Failed to set output device:', err);
+        });
+    } catch (e) {
+      console.warn('[Player.js] Failed to set output device:', e);
+    }
   }
 
-  replacePlaylist(
+  async replacePlaylist(
     trackIDs,
     playlistSourceID,
     playlistSourceType,
@@ -1162,7 +1207,7 @@ export default class {
       type: playlistSourceType,
       id: playlistSourceID,
     };
-    if (this.shuffle) this._shuffleTheList(autoPlayTrackID);
+    if (this.shuffle) await this._shuffleTheList(autoPlayTrackID);
     if (autoPlayTrackID === 'first') {
       this._replaceCurrentTrack(this.list[0]);
     } else {
