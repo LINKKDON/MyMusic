@@ -1,4 +1,10 @@
 {
+  "rewrites": [
+    {
+      "source": "/api/:match*",
+      "destination": "/api/proxy?slug=:match*"
+    }
+  ],
   "build": {
     "env": {
       "NODE_OPTIONS": "--openssl-legacy-provider"

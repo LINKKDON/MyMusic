@@ -6,13 +6,15 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'Environment variable REAL_API_URL is not set' });
   }
 
-  // Vercel Dynamic Route: req.query.slug is an array of path segments
-  // e.g. /api/playlist/detail -> slug: ['playlist', 'detail']
-  // We need to separate this from actual query parameters
-  const { slug, ...queryParams } = req.query;
+  // Get path from query parameter (passed via vercel.json rewrite)
+  // rewrite: /api/:match* -> /api/proxy?slug=:match*
+  let { slug, ...queryParams } = req.query;
 
-  // Reconstruct the path
-  const urlPath = '/' + (Array.isArray(slug) ? slug.join('/') : slug);
+  if (Array.isArray(slug)) {
+    slug = slug.join('/');
+  }
+  // Ensure leading slash
+  const urlPath = slug ? (slug.startsWith('/') ? slug : '/' + slug) : '';
 
   // Filter headers
   const headers = { ...req.headers };
@@ -32,7 +34,7 @@ module.exports = async (req, res) => {
       url: target + urlPath,
       method: req.method,
       headers: headers,
-      params: queryParams, // Pass only the real query params
+      params: queryParams,
       data: req.body,
       validateStatus: () => true, // Accept all status codes
       maxRedirects: 5,
