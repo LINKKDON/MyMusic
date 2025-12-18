@@ -1,8 +1,8 @@
 {
-  "rewrites": [
+  "rewrites_backup_comment": [
     {
       "source": "/api/:match*",
-      "destination": "/api/proxy"
+      "destination": "https://replace-with-your-api.com/:match*"
     }
   ],
   "build": {
