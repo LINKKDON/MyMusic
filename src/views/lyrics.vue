@@ -966,8 +966,8 @@ export default {
 
   img {
     border-radius: 50%;
-    width: 60%;
-    height: 60%;
+    width: 80%;
+    height: 80%;
     animation: none;
     box-shadow: 0 0 0 6px #0b0b0b; /* Separator */
   }
