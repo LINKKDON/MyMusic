@@ -945,6 +945,17 @@ export default {
     border-radius: 50%;
     width: 54vh;
     height: 54vh;
+    background: #0b0b0b;
+    background-image: repeating-radial-gradient(
+      #0b0b0b 0,
+      #0b0b0b 2px,
+      #1a1a1a 3px,
+      #0b0b0b 4px
+    );
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
     animation: rotate 20s linear infinite;
     animation-play-state: paused;
   }
@@ -955,15 +966,16 @@ export default {
 
   img {
     border-radius: 50%;
-    width: 100%;
-    height: 100%;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1); /* Subtle border */
+    width: 60%;
+    height: 60%;
+    animation: none;
+    box-shadow: 0 0 0 6px #0b0b0b; /* Separator */
   }
 
   .shadow {
     border-radius: 50%;
     animation: rotate 20s linear infinite;
-    animation-play-state: inherit; /* Sync with container */
+    animation-play-state: inherit;
   }
 }
 
