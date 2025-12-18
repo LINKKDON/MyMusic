@@ -2,7 +2,12 @@
   "rewrites": [
     {
       "source": "/api/:match*",
-      "destination": "https://your-netease-api.example.com/:match*"
+      "destination": "https://replace-with-your-api.com/:match*"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--openssl-legacy-provider"
+    }
+  }
 }

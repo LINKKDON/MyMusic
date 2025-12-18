@@ -1,10 +1,4 @@
 {
-  "rewrites_backup_comment": [
-    {
-      "source": "/api/:match*",
-      "destination": "https://replace-with-your-api.com/:match*"
-    }
-  ],
   "build": {
     "env": {
       "NODE_OPTIONS": "--openssl-legacy-provider"
