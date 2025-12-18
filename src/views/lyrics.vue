@@ -945,17 +945,6 @@ export default {
     border-radius: 50%;
     width: 54vh;
     height: 54vh;
-    background: #181818;
-    background-image: repeating-radial-gradient(
-      #181818 0,
-      #181818 2px,
-      #222 3px,
-      #181818 4px
-    );
-    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
     animation: rotate 20s linear infinite;
     animation-play-state: paused;
   }
@@ -966,29 +955,15 @@ export default {
 
   img {
     border-radius: 50%;
-    width: 70%;
-    height: 70%;
-    animation: none; /* Container rotates */
-    box-shadow: 0 0 0 4px #111; /* Border between art and vinyl */
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1); /* Subtle border */
   }
 
   .shadow {
-    display: none; /* Hide original shadow in record mode */
-  }
-
-  /* Center Hole */
-  .cover-container::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 16px;
-    height: 16px;
     border-radius: 50%;
-    background: #000;
-    border: 4px solid #222;
-    z-index: 10;
+    animation: rotate 20s linear infinite;
+    animation-play-state: inherit; /* Sync with container */
   }
 }
 
