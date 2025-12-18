@@ -747,19 +747,9 @@
       <div class="footer">
         <p class="author"
           >MADE BY
-          <a href="http://github.com/LINKKDON" target="_blank">Linus</a></p
+          <a href="http://github.com/LINKKDON" target="_blank">LINUS</a></p
         >
         <p class="version">v{{ version }}</p>
-
-        <a
-          v-if="!isElectron"
-          href="https://vercel.com/?utm_source=ohmusic&utm_campaign=oss"
-        >
-          <img
-            height="36"
-            src="https://www.datocms-assets.com/31049/1618983297-powered-by-vercel.svg"
-          />
-        </a>
       </div>
     </div>
   </div>
