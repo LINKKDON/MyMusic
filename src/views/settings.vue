@@ -567,7 +567,6 @@
           </div>
         </div>
       </div>
-
       <div class="item">
         <div class="left">
           <div class="title">{{ $t('settings.enableReversedMode') }}</div>
