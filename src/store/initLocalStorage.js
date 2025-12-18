@@ -15,7 +15,6 @@ let localStorage = {
     musicQuality: 320000,
     lyricFontSize: 28,
     outputDevice: 'default',
-    showPlaylistsByAppleMusic: false,
     enableUnblockNeteaseMusic: true,
     automaticallyCacheSongs: true,
     cacheLimit: 8192,

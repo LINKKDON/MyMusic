@@ -408,15 +408,6 @@ export default class {
       this._howler = null;
     }
 
-    // 确保全局清理
-    try {
-      Howler.unload();
-    } catch (e) {
-      if (DEBUG_MODE) {
-        console.debug('[Player.js] Error unloading Howler globally:', e);
-      }
-    }
-
     this._howler = new Howl({
       src: [source],
       html5: true,
@@ -449,6 +440,14 @@ export default class {
           }
         );
       }
+    });
+    this._howler.on('playerror', (id, error) => {
+      if (DEBUG_MODE) {
+        console.debug(`[Player.js] playerror: ${error}`);
+      }
+      this._howler.once('unlock', () => {
+        this._howler.play();
+      });
     });
     if (autoplay) {
       this.play();
