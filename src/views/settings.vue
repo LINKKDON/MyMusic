@@ -497,6 +497,22 @@
       </div>
 
       <h3>{{ $t('settings.others') }}</h3>
+      <div class="item">
+        <div class="left">
+          <div class="title">播放页唱片模式</div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="use-record-cover"
+              v-model="useRecordCover"
+              type="checkbox"
+              name="use-record-cover"
+            />
+            <label for="use-record-cover"></label>
+          </div>
+        </div>
+      </div>
       <div v-if="isElectron && !isMac" class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.closeAppOption.text') }} </div>
@@ -1030,6 +1046,17 @@ export default {
       set(value) {
         this.$store.commit('updateSettings', {
           key: 'enableOsdlyricsSupport',
+          value,
+        });
+      },
+    },
+    useRecordCover: {
+      get() {
+        return this.settings.useRecordCover || false;
+      },
+      set(value) {
+        this.$store.commit('updateSettings', {
+          key: 'useRecordCover',
           value,
         });
       },

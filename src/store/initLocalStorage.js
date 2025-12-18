@@ -23,6 +23,7 @@ let localStorage = {
     showLyricsTranslation: true,
     lyricsBackground: 'blur',
     enableOsdlyricsSupport: false,
+    useRecordCover: false,
     closeAppOption: 'ask',
     enableDiscordRichPresence: false,
     enableGlobalShortcut: true,

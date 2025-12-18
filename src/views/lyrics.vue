@@ -35,9 +35,16 @@
           <div v-if="settings.showLyricsTime" class="date">
             {{ date }}
           </div>
-          <div class="cover">
+          <div
+            class="cover"
+            :class="{ 'record-mode': settings.useRecordCover }"
+          >
             <div class="cover-container">
-              <img :src="imageUrl" loading="lazy" />
+              <img
+                :src="imageUrl"
+                loading="lazy"
+                :class="{ playing: player.playing }"
+              />
               <div
                 class="shadow"
                 :style="{ backgroundImage: `url(${imageUrl})` }"
@@ -930,6 +937,42 @@ export default {
     z-index: -1;
     background-size: cover;
     border-radius: 0.75em;
+  }
+}
+
+.cover.record-mode {
+  img {
+    border-radius: 50%;
+    width: 54vh;
+    height: 54vh;
+    animation: rotate 20s linear infinite;
+    animation-play-state: paused;
+    border: 12px solid #222;
+    box-sizing: border-box;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.3),
+      inset 0px 0px 0px 3px rgba(255, 255, 255, 0.05);
+  }
+
+  img.playing {
+    animation-play-state: running;
+  }
+
+  .shadow {
+    border-radius: 50%;
+  }
+
+  .cover-container::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 10;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #222;
+    transform: translate(-50%, -50%);
+    box-shadow: inset 0px 0px 0px 2px rgba(0, 0, 0, 0.5);
   }
 }
 
