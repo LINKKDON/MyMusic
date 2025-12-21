@@ -1,6 +1,6 @@
 {
   "name": "MyMusic",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "private": true,
   "description": "A third party music player for Netease Music",
   "author": "Linus<zltang@outlook.com>",
@@ -19,14 +19,14 @@
     "postinstall": "electron-builder install-app-deps",
     "postuninstall": "electron-builder install-app-deps",
     "prettier": "npx prettier --write ./src",
-    "netease_api:run": "npx @neteasecloudmusicapienhanced/api"
+    "netease_api:run": "npx @neteaseapireborn/api"
   },
   "main": "background.js",
   "engines": {
     "node": "20.x"
   },
   "dependencies": {
-    "@neteasecloudmusicapienhanced/api": "^4.29.7",
+    "@neteaseapireborn/api": "^4.29.7",
     "@unblockneteasemusic/rust-napi": "^0.4.0",
     "axios": "^0.26.1",
     "change-case": "^4.1.2",
