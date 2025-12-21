@@ -91,8 +91,8 @@ jobs:
           VUE_APP_NETEASE_API_URL: /api
           VUE_APP_ELECTRON_API_URL: /api
           VUE_APP_ELECTRON_API_URL_DEV: http://127.0.0.1:10754
-          VUE_APP_LASTFM_API_KEY: ${{ secrets.VUE_APP_LASTFM_API_KEY }}
-          VUE_APP_LASTFM_API_SHARED_SECRET: ${{ secrets.VUE_APP_LASTFM_API_SHARED_SECRET }}
+          VUE_APP_LASTFM_API_KEY: 4bdebce458417a777edeb6e96713a7f6
+          VUE_APP_LASTFM_API_SHARED_SECRET: 8714e277c07b053dc737e7d4cfb9c09c
         with:
           github_token: ${{ secrets.github_token }}
           release: false

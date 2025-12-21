@@ -974,7 +974,7 @@ export default {
 
   .shadow {
     border-radius: 50%;
-    animation: rotate 20s linear infinite;
+    animation: none;
     animation-play-state: inherit;
   }
 }
