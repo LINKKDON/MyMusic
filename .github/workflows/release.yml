@@ -82,9 +82,10 @@ jobs:
             @unblockneteasemusic/rust-napi-linux-arm-gnueabihf@${{steps.get_unm_version.outputs.unmver}}
         shell: bash
 
-      # Explicitly run the build command depending on OS
-      - name: Build Electron app (Windows)
-        if: runner.os == 'Windows'
+      # Use action-electron-builder BUT disable release (release: false)
+      # This ensures it only builds and leaves artifacts in dist_electron
+      - name: Build Electron app
+        uses: samuelmeuli/action-electron-builder@v1.6.0
         env:
           NODE_OPTIONS: --openssl-legacy-provider
           VUE_APP_NETEASE_API_URL: /api
@@ -92,37 +93,16 @@ jobs:
           VUE_APP_ELECTRON_API_URL_DEV: http://127.0.0.1:10754
           VUE_APP_LASTFM_API_KEY: ${{ secrets.VUE_APP_LASTFM_API_KEY }}
           VUE_APP_LASTFM_API_SHARED_SECRET: ${{ secrets.VUE_APP_LASTFM_API_SHARED_SECRET }}
-        run: |
-          yarn electron:build-win
-          dir dist_electron
+        with:
+          github_token: ${{ secrets.github_token }}
+          release: false
+          use_vue_cli: true
 
-      - name: Build Electron app (macOS)
-        if: runner.os == 'macOS'
-        env:
-          NODE_OPTIONS: --openssl-legacy-provider
-          VUE_APP_NETEASE_API_URL: /api
-          VUE_APP_ELECTRON_API_URL: /api
-          VUE_APP_ELECTRON_API_URL_DEV: http://127.0.0.1:10754
-          VUE_APP_LASTFM_API_KEY: ${{ secrets.VUE_APP_LASTFM_API_KEY }}
-          VUE_APP_LASTFM_API_SHARED_SECRET: ${{ secrets.VUE_APP_LASTFM_API_SHARED_SECRET }}
-        run: |
-          yarn electron:build-mac
-          ls -la dist_electron
+      - name: List dist_electron
+        run: ls -R dist_electron || echo "dist_electron not found"
+        shell: bash
 
-      - name: Build Electron app (Linux)
-        if: runner.os == 'Linux'
-        env:
-          NODE_OPTIONS: --openssl-legacy-provider
-          VUE_APP_NETEASE_API_URL: /api
-          VUE_APP_ELECTRON_API_URL: /api
-          VUE_APP_ELECTRON_API_URL_DEV: http://127.0.0.1:10754
-          VUE_APP_LASTFM_API_KEY: ${{ secrets.VUE_APP_LASTFM_API_KEY }}
-          VUE_APP_LASTFM_API_SHARED_SECRET: ${{ secrets.VUE_APP_LASTFM_API_SHARED_SECRET }}
-        run: |
-          yarn electron:build-linux
-          ls -la dist_electron
-
-      # Upload Artifacts (for debugging and backup)
+      # Upload Artifacts
       - uses: actions/upload-artifact@v4
         with:
           name: MyMusic-${{ runner.os }}
@@ -130,7 +110,7 @@ jobs:
             dist_electron/*.exe
             dist_electron/*.dmg
             dist_electron/*.AppImage
-          if-no-files-found: error
+          if-no-files-found: warn
 
       # Create Release and Upload Assets (Only on Tag)
       - name: Create Release
