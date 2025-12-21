@@ -95,7 +95,7 @@ module.exports = {
         publish: [
           {
             provider: 'github',
-            owner: 'your-username',
+            owner: 'LINKKDON',
             repo: 'MyMusic',
             vPrefixedTagName: true,
             releaseType: 'draft',
