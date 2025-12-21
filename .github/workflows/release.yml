@@ -92,7 +92,9 @@ jobs:
           VUE_APP_ELECTRON_API_URL_DEV: http://127.0.0.1:10754
           VUE_APP_LASTFM_API_KEY: ${{ secrets.VUE_APP_LASTFM_API_KEY }}
           VUE_APP_LASTFM_API_SHARED_SECRET: ${{ secrets.VUE_APP_LASTFM_API_SHARED_SECRET }}
-        run: yarn electron:build-win
+        run: |
+          yarn electron:build-win
+          dir dist_electron
 
       - name: Build Electron app (macOS)
         if: runner.os == 'macOS'
@@ -103,7 +105,9 @@ jobs:
           VUE_APP_ELECTRON_API_URL_DEV: http://127.0.0.1:10754
           VUE_APP_LASTFM_API_KEY: ${{ secrets.VUE_APP_LASTFM_API_KEY }}
           VUE_APP_LASTFM_API_SHARED_SECRET: ${{ secrets.VUE_APP_LASTFM_API_SHARED_SECRET }}
-        run: yarn electron:build-mac
+        run: |
+          yarn electron:build-mac
+          ls -la dist_electron
 
       - name: Build Electron app (Linux)
         if: runner.os == 'Linux'
@@ -114,7 +118,9 @@ jobs:
           VUE_APP_ELECTRON_API_URL_DEV: http://127.0.0.1:10754
           VUE_APP_LASTFM_API_KEY: ${{ secrets.VUE_APP_LASTFM_API_KEY }}
           VUE_APP_LASTFM_API_SHARED_SECRET: ${{ secrets.VUE_APP_LASTFM_API_SHARED_SECRET }}
-        run: yarn electron:build-linux
+        run: |
+          yarn electron:build-linux
+          ls -la dist_electron
 
       # Upload Artifacts (for debugging and backup)
       - uses: actions/upload-artifact@v4
@@ -124,7 +130,7 @@ jobs:
             dist_electron/*.exe
             dist_electron/*.dmg
             dist_electron/*.AppImage
-          if-no-files-found: ignore
+          if-no-files-found: error
 
       # Create Release and Upload Assets (Only on Tag)
       - name: Create Release
